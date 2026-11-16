@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProductSummary",
+  "description": "Produit du catalogue, vue liste - extrait de META-INF/openapi-contract-v1.yaml",
+  "type": "object",
+  "required": ["code", "name", "profile", "annualRate"],
+  "additionalProperties": false,
+  "properties": {
+    "code": { "type": "string" },
+    "name": { "type": "string" },
+    "profile": { "type": "string" },
+    "annualRate": { "type": "number", "multipleOf": 0.000001 }
+  }
+}

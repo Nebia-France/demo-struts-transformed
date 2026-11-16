@@ -1,0 +1,828 @@
+{
+  "startedAt": "2026-11-13T14:07:32.648509Z",
+  "environment": {
+    "java": "OpenJDK 64-Bit Server VM 21.0.11",
+    "os": "Mac OS X 27.0.1 aarch64",
+    "availableProcessors": 15,
+    "replicas": 4,
+    "virtualUsers": 30,
+    "memoryLimitMbEmulated": 512,
+    "gc": "-XX:+UseSerialGC",
+    "nominalRps": 750.0,
+    "nativeMemoryTracking": false,
+    "artifact": "target/quarkus-app/quarkus-run.jar"
+  },
+  "maxConnections": 100,
+  "nfg007_startup": [
+    {
+      "replica": "r1",
+      "flywayMigrateAtStart": true,
+      "quarkusStartedInMillis": 1489,
+      "processSpawnToStartedProbeMillis": 1628,
+      "readyMillis": 1636,
+      "flywayLine": "Current version of schema \"subscriptions\": null"
+    },
+    {
+      "replica": "r2",
+      "flywayMigrateAtStart": false,
+      "quarkusStartedInMillis": 1262,
+      "processSpawnToStartedProbeMillis": 1397,
+      "readyMillis": 1409,
+      "flywayLine": null
+    },
+    {
+      "replica": "r3",
+      "flywayMigrateAtStart": false,
+      "quarkusStartedInMillis": 1171,
+      "processSpawnToStartedProbeMillis": 1293,
+      "readyMillis": 1308,
+      "flywayLine": null
+    },
+    {
+      "replica": "r4",
+      "flywayMigrateAtStart": false,
+      "quarkusStartedInMillis": 1100,
+      "processSpawnToStartedProbeMillis": 1206,
+      "readyMillis": 1222,
+      "flywayLine": null
+    }
+  ],
+  "load_nominal": {
+    "replicas": 4,
+    "virtualUsers": 30,
+    "targetRps": 750.0,
+    "durationSeconds": 90,
+    "elapsedMillis": 90194,
+    "requests": 66738,
+    "throughputRps": 739.9,
+    "journeysCompleted": 9534,
+    "journeysFailed": 0,
+    "clientErrors": 0,
+    "clientErrorsByOperation": {
+      "confirm": 0,
+      "startDraft": 0,
+      "putSimulation": 0,
+      "putSubscriber": 0,
+      "getSubscription": 0,
+      "getDraft": 0
+    },
+    "errorSamples": [],
+    "clientLatencyMs": {
+      "startDraft": {
+        "count": 9534,
+        "p50": 1.9,
+        "p95": 10.4,
+        "p99": 52.0,
+        "max": 138.6
+      },
+      "getDraft": {
+        "count": 19068,
+        "p50": 0.7,
+        "p95": 4.8,
+        "p99": 37.2,
+        "max": 133.8
+      },
+      "putSubscriber": {
+        "count": 9534,
+        "p50": 1.5,
+        "p95": 7.7,
+        "p99": 47.6,
+        "max": 143.4
+      },
+      "putSimulation": {
+        "count": 9534,
+        "p50": 2.4,
+        "p95": 12.0,
+        "p99": 57.6,
+        "max": 135.6
+      },
+      "confirm": {
+        "count": 9534,
+        "p50": 3.2,
+        "p95": 13.0,
+        "p99": 53.2,
+        "max": 164.5
+      },
+      "getSubscription": {
+        "count": 9534,
+        "p50": 0.8,
+        "p95": 5.2,
+        "p99": 36.1,
+        "max": 203.0
+      }
+    },
+    "clientLatencyMsAllOperations": {
+      "count": 66738,
+      "p50": 1.6,
+      "p95": 8.4,
+      "p99": 46.7,
+      "max": 203.0
+    },
+    "serverSideHttpServerRequests": {
+      "GET /v1/drafts/{draftId} 200": {
+        "count": 19068,
+        "meanMs": 1.6,
+        "maxMsLastWindow": 133.6
+      },
+      "GET /v1/subscriptions/{reference} 200": {
+        "count": 9534,
+        "meanMs": 1.6,
+        "maxMsLastWindow": 202.8
+      },
+      "POST /v1/drafts 201": {
+        "count": 9534,
+        "meanMs": 3.4,
+        "maxMsLastWindow": 419.1
+      },
+      "POST /v1/drafts/{draftId}/confirmation 201": {
+        "count": 9534,
+        "meanMs": 4.9,
+        "maxMsLastWindow": 424.3
+      },
+      "PUT /v1/drafts/{draftId}/simulation 200": {
+        "count": 9534,
+        "meanMs": 4.1,
+        "maxMsLastWindow": 135.3
+      },
+      "PUT /v1/drafts/{draftId}/subscriber 200": {
+        "count": 9534,
+        "meanMs": 2.8,
+        "maxMsLastWindow": 143.1
+      }
+    },
+    "restClientHttpClientRequests": {
+      "GET /v1/products/{code} 200": {
+        "count": 19068,
+        "meanMs": 0.5,
+        "maxMsLastWindow": 154.8
+      },
+      "POST /v1/simulations 200": {
+        "count": 19068,
+        "meanMs": 0.5,
+        "maxMsLastWindow": 63.7
+      }
+    },
+    "faultToleranceCounters": {
+      "ft_bulkhead_calls_total{bulkheadResult=\"accepted\",method=\"CatalogueClient.findProduct\"}": 19068,
+      "ft_bulkhead_calls_total{bulkheadResult=\"accepted\",method=\"SimulationClient.compute\"}": 19068,
+      "ft_bulkhead_calls_total{bulkheadResult=\"rejected\",method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_bulkhead_calls_total{bulkheadResult=\"rejected\",method=\"SimulationClient.compute\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"circuitBreakerOpen\",method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"circuitBreakerOpen\",method=\"SimulationClient.compute\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"failure\",method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"failure\",method=\"SimulationClient.compute\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"success\",method=\"CatalogueClient.findProduct\"}": 19068,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"success\",method=\"SimulationClient.compute\"}": 19068,
+      "ft_circuitbreaker_opened_total{method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_circuitbreaker_opened_total{method=\"SimulationClient.compute\"}": 0,
+      "ft_invocations_total{fallback=\"notDefined\",method=\"CatalogueClient.findProduct\",result=\"exceptionThrown\"}": 0,
+      "ft_invocations_total{fallback=\"notDefined\",method=\"CatalogueClient.findProduct\",result=\"valueReturned\"}": 19068,
+      "ft_invocations_total{fallback=\"notDefined\",method=\"SimulationClient.compute\",result=\"exceptionThrown\"}": 0,
+      "ft_invocations_total{fallback=\"notDefined\",method=\"SimulationClient.compute\",result=\"valueReturned\"}": 19068,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"false\",retryResult=\"exceptionNotRetryable\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"false\",retryResult=\"maxDurationReached\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"false\",retryResult=\"maxRetriesReached\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"false\",retryResult=\"valueReturned\"}": 19068,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"true\",retryResult=\"exceptionNotRetryable\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"true\",retryResult=\"maxDurationReached\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"true\",retryResult=\"maxRetriesReached\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"true\",retryResult=\"valueReturned\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"false\",retryResult=\"exceptionNotRetryable\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"false\",retryResult=\"maxDurationReached\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"false\",retryResult=\"maxRetriesReached\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"false\",retryResult=\"valueReturned\"}": 19068,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"true\",retryResult=\"exceptionNotRetryable\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"true\",retryResult=\"maxDurationReached\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"true\",retryResult=\"maxRetriesReached\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"true\",retryResult=\"valueReturned\"}": 0,
+      "ft_retry_retries_total{method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_retry_retries_total{method=\"SimulationClient.compute\"}": 0,
+      "ft_timeout_calls_total{method=\"CatalogueClient.findProduct\",timedOut=\"false\"}": 19068,
+      "ft_timeout_calls_total{method=\"CatalogueClient.findProduct\",timedOut=\"true\"}": 0,
+      "ft_timeout_calls_total{method=\"SimulationClient.compute\",timedOut=\"false\"}": 19068,
+      "ft_timeout_calls_total{method=\"SimulationClient.compute\",timedOut=\"true\"}": 0
+    },
+    "acquisitionTimeoutsInLogs": 0,
+    "memory": {
+      "memoryLimitMb": 512,
+      "gc": "-XX:+UseSerialGC",
+      "rssMbMaxPerReplica": {
+        "r1": 281.3,
+        "r2": 287.2,
+        "r3": 295.1,
+        "r4": 258.2
+      },
+      "rssMbAvgPerReplica": {
+        "r1": 218.2,
+        "r2": 213.3,
+        "r3": 214.1,
+        "r4": 207.1
+      },
+      "nmtCommittedMbAtEndOfLoadPerReplica": {},
+      "jvmMemoryCommittedMbPerReplica": {
+        "r1": {
+          "heap": 49.2,
+          "nonheap": 138.3,
+          "direct": 6.4
+        },
+        "r2": {
+          "heap": 55.9,
+          "nonheap": 138.8,
+          "direct": 6.2
+        },
+        "r3": {
+          "heap": 61.3,
+          "nonheap": 141.6,
+          "direct": 6.9
+        },
+        "r4": {
+          "heap": 53.6,
+          "nonheap": 134.8,
+          "direct": 5.6
+        }
+      }
+    },
+    "pool": {
+      "maxConnections": 100,
+      "replicas": 4,
+      "poolMaxSizePerReplica": 10,
+      "pgStatActivityBenchDbMax": 41,
+      "pgStatActivityAllDbMax": 41,
+      "agroalActiveMaxPerReplica": {
+        "r2": 1.0,
+        "r3": 2.0,
+        "r4": 6.0,
+        "r1": 7.0
+      },
+      "agroalAwaitingMaxPerReplica": {
+        "r2": 0.0,
+        "r3": 0.0,
+        "r4": 0.0,
+        "r1": 0.0
+      },
+      "agroalMaxUsedPerReplica": {
+        "r1": 10.0,
+        "r2": 10.0,
+        "r3": 10.0,
+        "r4": 10.0
+      },
+      "agroalBlockingTimeMaxMsPerReplica": {
+        "r1": 51.0,
+        "r2": 62.0,
+        "r3": 55.0,
+        "r4": 53.0
+      }
+    },
+    "statelessness": {
+      "draftRetention": "PT30S",
+      "draftPurgeCron": "*/5 * * * * ?",
+      "draftsBefore": 1554,
+      "draftsSamples": [
+        {
+          "t": 0,
+          "rows": 1584
+        },
+        {
+          "t": 5,
+          "rows": 2136
+        },
+        {
+          "t": 10,
+          "rows": 2703
+        },
+        {
+          "t": 15,
+          "rows": 3271
+        },
+        {
+          "t": 21,
+          "rows": 3201
+        },
+        {
+          "t": 26,
+          "rows": 3224
+        },
+        {
+          "t": 31,
+          "rows": 3272
+        },
+        {
+          "t": 36,
+          "rows": 3299
+        },
+        {
+          "t": 42,
+          "rows": 3324
+        },
+        {
+          "t": 47,
+          "rows": 3345
+        },
+        {
+          "t": 52,
+          "rows": 3363
+        },
+        {
+          "t": 58,
+          "rows": 3386
+        },
+        {
+          "t": 63,
+          "rows": 3452
+        },
+        {
+          "t": 69,
+          "rows": 3500
+        },
+        {
+          "t": 74,
+          "rows": 3538
+        },
+        {
+          "t": 80,
+          "rows": 3587
+        },
+        {
+          "t": 87,
+          "rows": 3168
+        }
+      ],
+      "draftsSteadyState": {
+        "fromSecond": 40,
+        "samples": 9,
+        "min": 3168,
+        "max": 3587,
+        "mean": 3407.0,
+        "spreadPercentOfMean": 12.3,
+        "driftPercentSecondHalfVsFirstHalf": 2.8
+      },
+      "subscriptionsCreated": 9534,
+      "journeysMinDistinctReplicas": 1,
+      "journeysAllRequestsOnOneReplica": 1,
+      "journeysSpanningSeveralReplicas": 9533,
+      "setCookieResponses": 0
+    }
+  },
+  "load_stress": {
+    "replicas": 4,
+    "virtualUsers": 30,
+    "targetRps": "unpaced",
+    "durationSeconds": 90,
+    "elapsedMillis": 90106,
+    "requests": 473396,
+    "throughputRps": 5253.8,
+    "journeysCompleted": 67628,
+    "journeysFailed": 0,
+    "clientErrors": 0,
+    "clientErrorsByOperation": {
+      "confirm": 0,
+      "startDraft": 0,
+      "putSimulation": 0,
+      "putSubscriber": 0,
+      "getSubscription": 0,
+      "getDraft": 0
+    },
+    "errorSamples": [],
+    "clientLatencyMs": {
+      "startDraft": {
+        "count": 67628,
+        "p50": 5.6,
+        "p95": 15.4,
+        "p99": 29.4,
+        "max": 141.9
+      },
+      "getDraft": {
+        "count": 135256,
+        "p50": 1.3,
+        "p95": 3.4,
+        "p99": 7.3,
+        "max": 258.7
+      },
+      "putSubscriber": {
+        "count": 67628,
+        "p50": 6.4,
+        "p95": 17.3,
+        "p99": 31.3,
+        "max": 139.0
+      },
+      "putSimulation": {
+        "count": 67628,
+        "p50": 8.0,
+        "p95": 20.4,
+        "p99": 35.3,
+        "max": 235.0
+      },
+      "confirm": {
+        "count": 67628,
+        "p50": 8.7,
+        "p95": 21.3,
+        "p99": 36.8,
+        "max": 350.8
+      },
+      "getSubscription": {
+        "count": 67628,
+        "p50": 1.3,
+        "p95": 3.4,
+        "p99": 6.8,
+        "max": 126.3
+      }
+    },
+    "clientLatencyMsAllOperations": {
+      "count": 473396,
+      "p50": 4.4,
+      "p95": 15.6,
+      "p99": 28.4,
+      "max": 350.8
+    },
+    "serverSideHttpServerRequests": {
+      "GET /v1/drafts/{draftId} 200": {
+        "count": 135256,
+        "meanMs": 1.5,
+        "maxMsLastWindow": 258.5
+      },
+      "GET /v1/subscriptions/{reference} 200": {
+        "count": 67628,
+        "meanMs": 1.5,
+        "maxMsLastWindow": 202.8
+      },
+      "POST /v1/drafts 201": {
+        "count": 67628,
+        "meanMs": 6.8,
+        "maxMsLastWindow": 141.8
+      },
+      "POST /v1/drafts/{draftId}/confirmation 201": {
+        "count": 67628,
+        "meanMs": 10.2,
+        "maxMsLastWindow": 350.5
+      },
+      "PUT /v1/drafts/{draftId}/simulation 200": {
+        "count": 67628,
+        "meanMs": 9.5,
+        "maxMsLastWindow": 234.7
+      },
+      "PUT /v1/drafts/{draftId}/subscriber 200": {
+        "count": 67628,
+        "meanMs": 7.7,
+        "maxMsLastWindow": 143.1
+      }
+    },
+    "restClientHttpClientRequests": {
+      "GET /v1/products/{code} 200": {
+        "count": 135256,
+        "meanMs": 0.3,
+        "maxMsLastWindow": 30.5
+      },
+      "POST /v1/simulations 200": {
+        "count": 135256,
+        "meanMs": 0.3,
+        "maxMsLastWindow": 63.7
+      }
+    },
+    "faultToleranceCounters": {
+      "ft_bulkhead_calls_total{bulkheadResult=\"accepted\",method=\"CatalogueClient.findProduct\"}": 135256,
+      "ft_bulkhead_calls_total{bulkheadResult=\"accepted\",method=\"SimulationClient.compute\"}": 135256,
+      "ft_bulkhead_calls_total{bulkheadResult=\"rejected\",method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_bulkhead_calls_total{bulkheadResult=\"rejected\",method=\"SimulationClient.compute\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"circuitBreakerOpen\",method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"circuitBreakerOpen\",method=\"SimulationClient.compute\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"failure\",method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"failure\",method=\"SimulationClient.compute\"}": 0,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"success\",method=\"CatalogueClient.findProduct\"}": 135256,
+      "ft_circuitbreaker_calls_total{circuitBreakerResult=\"success\",method=\"SimulationClient.compute\"}": 135256,
+      "ft_circuitbreaker_opened_total{method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_circuitbreaker_opened_total{method=\"SimulationClient.compute\"}": 0,
+      "ft_invocations_total{fallback=\"notDefined\",method=\"CatalogueClient.findProduct\",result=\"exceptionThrown\"}": 0,
+      "ft_invocations_total{fallback=\"notDefined\",method=\"CatalogueClient.findProduct\",result=\"valueReturned\"}": 135256,
+      "ft_invocations_total{fallback=\"notDefined\",method=\"SimulationClient.compute\",result=\"exceptionThrown\"}": 0,
+      "ft_invocations_total{fallback=\"notDefined\",method=\"SimulationClient.compute\",result=\"valueReturned\"}": 135256,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"false\",retryResult=\"exceptionNotRetryable\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"false\",retryResult=\"maxDurationReached\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"false\",retryResult=\"maxRetriesReached\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"false\",retryResult=\"valueReturned\"}": 135256,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"true\",retryResult=\"exceptionNotRetryable\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"true\",retryResult=\"maxDurationReached\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"true\",retryResult=\"maxRetriesReached\"}": 0,
+      "ft_retry_calls_total{method=\"CatalogueClient.findProduct\",retried=\"true\",retryResult=\"valueReturned\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"false\",retryResult=\"exceptionNotRetryable\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"false\",retryResult=\"maxDurationReached\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"false\",retryResult=\"maxRetriesReached\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"false\",retryResult=\"valueReturned\"}": 135256,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"true\",retryResult=\"exceptionNotRetryable\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"true\",retryResult=\"maxDurationReached\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"true\",retryResult=\"maxRetriesReached\"}": 0,
+      "ft_retry_calls_total{method=\"SimulationClient.compute\",retried=\"true\",retryResult=\"valueReturned\"}": 0,
+      "ft_retry_retries_total{method=\"CatalogueClient.findProduct\"}": 0,
+      "ft_retry_retries_total{method=\"SimulationClient.compute\"}": 0,
+      "ft_timeout_calls_total{method=\"CatalogueClient.findProduct\",timedOut=\"false\"}": 135256,
+      "ft_timeout_calls_total{method=\"CatalogueClient.findProduct\",timedOut=\"true\"}": 0,
+      "ft_timeout_calls_total{method=\"SimulationClient.compute\",timedOut=\"false\"}": 135256,
+      "ft_timeout_calls_total{method=\"SimulationClient.compute\",timedOut=\"true\"}": 0
+    },
+    "acquisitionTimeoutsInLogs": 0,
+    "memory": {
+      "memoryLimitMb": 512,
+      "gc": "-XX:+UseSerialGC",
+      "rssMbMaxPerReplica": {
+        "r1": 232.1,
+        "r2": 238.4,
+        "r3": 237.8,
+        "r4": 235.1
+      },
+      "rssMbAvgPerReplica": {
+        "r1": 195.5,
+        "r2": 200.8,
+        "r3": 205.1,
+        "r4": 196.5
+      },
+      "nmtCommittedMbAtEndOfLoadPerReplica": {},
+      "jvmMemoryCommittedMbPerReplica": {
+        "r1": {
+          "heap": 49.2,
+          "nonheap": 141.6,
+          "direct": 8.6
+        },
+        "r2": {
+          "heap": 55.9,
+          "nonheap": 142.6,
+          "direct": 8.4
+        },
+        "r3": {
+          "heap": 61.3,
+          "nonheap": 145.2,
+          "direct": 8.5
+        },
+        "r4": {
+          "heap": 53.6,
+          "nonheap": 138.2,
+          "direct": 8.0
+        }
+      }
+    },
+    "pool": {
+      "maxConnections": 100,
+      "replicas": 4,
+      "poolMaxSizePerReplica": 10,
+      "pgStatActivityBenchDbMax": 41,
+      "pgStatActivityAllDbMax": 41,
+      "agroalActiveMaxPerReplica": {
+        "r2": 9.0,
+        "r3": 9.0,
+        "r4": 9.0,
+        "r1": 9.0
+      },
+      "agroalAwaitingMaxPerReplica": {
+        "r2": 4.0,
+        "r3": 0.0,
+        "r4": 0.0,
+        "r1": 0.0
+      },
+      "agroalMaxUsedPerReplica": {
+        "r1": 10.0,
+        "r2": 10.0,
+        "r3": 10.0,
+        "r4": 10.0
+      },
+      "agroalBlockingTimeMaxMsPerReplica": {
+        "r1": 51.0,
+        "r2": 62.0,
+        "r3": 55.0,
+        "r4": 53.0
+      }
+    },
+    "statelessness": {
+      "draftRetention": "PT30S",
+      "draftPurgeCron": "*/5 * * * * ?",
+      "draftsBefore": 3433,
+      "draftsSamples": [
+        {
+          "t": 0,
+          "rows": 3389
+        },
+        {
+          "t": 6,
+          "rows": 7189
+        },
+        {
+          "t": 12,
+          "rows": 10506
+        },
+        {
+          "t": 18,
+          "rows": 14180
+        },
+        {
+          "t": 23,
+          "rows": 18020
+        },
+        {
+          "t": 29,
+          "rows": 22222
+        },
+        {
+          "t": 35,
+          "rows": 22963
+        },
+        {
+          "t": 42,
+          "rows": 23498
+        },
+        {
+          "t": 48,
+          "rows": 24080
+        },
+        {
+          "t": 54,
+          "rows": 25617
+        },
+        {
+          "t": 59,
+          "rows": 26133
+        },
+        {
+          "t": 65,
+          "rows": 23251
+        },
+        {
+          "t": 71,
+          "rows": 23692
+        },
+        {
+          "t": 77,
+          "rows": 24761
+        },
+        {
+          "t": 83,
+          "rows": 25439
+        },
+        {
+          "t": 88,
+          "rows": 25390
+        }
+      ],
+      "draftsSteadyState": {
+        "fromSecond": 40,
+        "samples": 9,
+        "min": 23251,
+        "max": 26133,
+        "mean": 24651.2,
+        "spreadPercentOfMean": 11.7,
+        "driftPercentSecondHalfVsFirstHalf": -1.3
+      },
+      "subscriptionsCreated": 67628,
+      "journeysMinDistinctReplicas": 1,
+      "journeysAllRequestsOnOneReplica": 13,
+      "journeysSpanningSeveralReplicas": 67615,
+      "setCookieResponses": 0
+    }
+  },
+  "draftsAfterDrain": 0,
+  "nfg012_rolling_restart": {
+    "shutdownTimeout": "30S",
+    "preStopSleepSeconds": 5,
+    "steps": [
+      {
+        "new": "r1-g1",
+        "newReadyMillis": 3029,
+        "old": "r1",
+        "sigtermToExitMillis": 363,
+        "exitedWithinGracePeriod": true,
+        "exitCode": 143
+      },
+      {
+        "new": "r2-g2",
+        "newReadyMillis": 5436,
+        "old": "r2",
+        "sigtermToExitMillis": 150,
+        "exitedWithinGracePeriod": true,
+        "exitCode": 143
+      },
+      {
+        "new": "r3-g3",
+        "newReadyMillis": 5450,
+        "old": "r3",
+        "sigtermToExitMillis": 318,
+        "exitedWithinGracePeriod": true,
+        "exitCode": 143
+      },
+      {
+        "new": "r4-g4",
+        "newReadyMillis": 3128,
+        "old": "r4",
+        "sigtermToExitMillis": 272,
+        "exitedWithinGracePeriod": true,
+        "exitCode": 143
+      }
+    ],
+    "elapsedMillis": 43294,
+    "requests": 228032,
+    "throughputRps": 5267.1,
+    "journeysCompleted": 32576,
+    "journeysFailed": 0,
+    "clientErrors": 0,
+    "clientErrorsByOperation": {
+      "confirm": 0,
+      "startDraft": 0,
+      "putSimulation": 0,
+      "putSubscriber": 0,
+      "getSubscription": 0,
+      "getDraft": 0
+    },
+    "errorSamples": [],
+    "clientLatencyMs": {
+      "startDraft": {
+        "count": 32576,
+        "p50": 5.4,
+        "p95": 13.0,
+        "p99": 21.5,
+        "max": 547.5
+      },
+      "getDraft": {
+        "count": 65152,
+        "p50": 1.6,
+        "p95": 4.1,
+        "p99": 8.3,
+        "max": 371.7
+      },
+      "putSubscriber": {
+        "count": 32576,
+        "p50": 6.1,
+        "p95": 14.3,
+        "p99": 23.5,
+        "max": 399.8
+      },
+      "putSimulation": {
+        "count": 32576,
+        "p50": 7.9,
+        "p95": 17.7,
+        "p99": 29.2,
+        "max": 542.7
+      },
+      "confirm": {
+        "count": 32576,
+        "p50": 8.5,
+        "p95": 19.0,
+        "p99": 34.2,
+        "max": 562.3
+      },
+      "getSubscription": {
+        "count": 32576,
+        "p50": 1.6,
+        "p95": 4.1,
+        "p99": 7.3,
+        "max": 347.4
+      }
+    },
+    "clientLatencyMsAllOperations": {
+      "count": 228032,
+      "p50": 4.3,
+      "p95": 13.9,
+      "p99": 23.5,
+      "max": 562.3
+    }
+  },
+  "chaos_replay": [
+    {
+      "case": "1-simulation-arretee",
+      "expectedStatus": 503,
+      "status": 503,
+      "problemType": "urn:horizon:simulation-unavailable",
+      "durationMillis": 53,
+      "liveness": 200,
+      "subscriptionRowsDelta": 0,
+      "replayAfterRestoreStatus": 201,
+      "subscriptionRowsDeltaAfterReplay": 1
+    },
+    {
+      "case": "2-catalogue-arrete",
+      "expectedStatus": 503,
+      "status": 503,
+      "problemType": "urn:horizon:service-unavailable",
+      "durationMillis": 376,
+      "liveness": 200,
+      "subscriptionRowsDelta": 0,
+      "replayAfterRestoreStatus": 201,
+      "subscriptionRowsDeltaAfterReplay": 1
+    },
+    {
+      "case": "3-latence-2500ms",
+      "expectedStatus": 201,
+      "status": 201,
+      "problemType": null,
+      "durationMillis": 2508,
+      "liveness": 200,
+      "subscriptionRowsDelta": 1
+    },
+    {
+      "case": "4-latence-3500ms",
+      "expectedStatus": 503,
+      "status": 503,
+      "problemType": "urn:horizon:simulation-unavailable",
+      "durationMillis": 3008,
+      "liveness": 200,
+      "subscriptionRowsDelta": 0,
+      "replayAfterRestoreStatus": 201,
+      "subscriptionRowsDeltaAfterReplay": 1
+    }
+  ],
+  "finishedAt": "2026-11-13T14:12:26.362919Z"
+}

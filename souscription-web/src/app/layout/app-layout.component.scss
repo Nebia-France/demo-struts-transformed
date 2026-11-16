@@ -1,0 +1,55 @@
+@use '../../styles/tokens' as t;
+
+// `.workspace`, `.sidebar`, `main`, `h1` and `p` from `application.css`: all four selectors
+// target elements of this component's template, so they are scoped here.
+
+.workspace {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  min-height: 510px;
+}
+
+.sidebar {
+  background: #f0f3f7;
+  border-right: 1px solid #b8c2ce;
+  padding: 18px 10px;
+}
+
+main {
+  padding: 14px 20px 24px;
+  min-width: 0;
+}
+
+h1 {
+  margin: 0 0 13px;
+  font-size: 1.5rem;
+  color: t.$c-brand-dark;
+  font-weight: bold;
+  line-height: 1.35;
+}
+
+p {
+  margin: 10px 0;
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
+
+  main {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .workspace {
+    display: block;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #b8c2ce;
+    padding: 8px;
+  }
+}

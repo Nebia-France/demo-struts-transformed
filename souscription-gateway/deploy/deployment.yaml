@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: souscription-gateway
+  labels:
+    app: souscription-gateway
+spec:
+  # >= 2 : une replique peut etre drainee (mise a jour, eviction) sans couper l'entree publique.
+  # L'HPA (hpa.yaml) reprend la main sur ce nombre, avec minReplicas: 2.
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: souscription-gateway
+  template:
+    metadata:
+      labels:
+        app: souscription-gateway
+    spec:
+      # Budget d'arret : preStop 5 s (retrait des endpoints du Service / de l'ingress) + drain
+      # quarkus.shutdown.timeout 10 s + marge 5 s. Doit rester > 5 + 10, sinon le SIGKILL coupe
+      # les requetes encore en vol.
+      terminationGracePeriodSeconds: 20
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 185
+        fsGroup: 185
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: souscription-gateway
+          image: souscription-gateway:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 185
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          env:
+            - name: JAVA_OPTS_APPEND
+              value: "-XX:MaxRAMPercentage=70 -Dquarkus.http.host=0.0.0.0"
+            # Mots de passe du materiel mTLS : jamais en clair dans le depot ni dans l'image.
+            - name: TLS_KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: souscription-gateway-mtls
+                  key: keystore-password
+            - name: TLS_TRUSTSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: souscription-gateway-mtls
+                  key: truststore-password
+            # Collecteur OTLP (W6-T04) : aucun hote dans l'image ni dans application.properties.
+            # Levier de retour arriere sans reconstruction : QUARKUS_OTEL_SDK_DISABLED=true.
+            - name: OTEL_COLLECTOR_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: souscription-gateway-observability
+                  key: otel-collector-endpoint
+          resources:
+            # Aligne sur la cible <= 180 Mo RSS au repos.
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: "1"
+              memory: 256Mi
+          # Sondes cablees au plan 25 (W6-T01), servies uniquement par l'interface de management.
+          # live : trivial, jamais lie a un aval (une dependance degradee ne redemarre pas le pod).
+          # ready : capacite propre de la passerelle uniquement (AG-007 / NFG-013).
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: management
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: management
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          lifecycle:
+            # Laisse au plan de controle le temps de retirer le pod des endpoints avant le SIGTERM :
+            # aucune nouvelle requete n'arrive pendant le drain de 10 s qui suit.
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            # Materiel mTLS (keystore / truststore) - plan 19.
+            - name: tls
+              mountPath: /etc/gateway/tls
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: tls
+          secret:
+            secretName: souscription-gateway-mtls
+            defaultMode: 0400
+            items:
+              - key: keystore.p12
+                path: keystore.p12
+              - key: truststore.p12
+                path: truststore.p12

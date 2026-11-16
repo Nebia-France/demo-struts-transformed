@@ -1,0 +1,1 @@
+CREATE DOMAIN IF NOT EXISTS subscriptions.timestamptz AS TIMESTAMP WITH TIME ZONE;

@@ -1,0 +1,5 @@
+// Catalogue screen rules from `application.css`: `.intro`, `.panel`, `.table-scroll`,
+// `.data-table`, `.catalogue`, `.rate` and the message blocks (`notice=parcours`).
+@use '../../styles/panel';
+@use '../../styles/data-table';
+@use '../../styles/message';

@@ -1,0 +1,90 @@
+openapi: 3.1.0
+info:
+  title: Horizon Catalogue Service Internal API (consumed by souscription-service)
+  version: 1.0.0
+  description: |
+    Subset of the souscription-catalogue-service /v1 contract consumed by souscription-service
+    inside the confirmation path. It is the same published document as the gateway edge; only the
+    product lookup is used here.
+
+    Why this edge exists: in the source, SubscriptionService read the product straight from
+    CatalogService in the same JVM and SubscriptionRepository denormalised product_code,
+    product_name, product_profile and annual_rate into the subscriptions row. After the confirmed
+    split (OD-002) the confirmation cannot complete unless this service answers. The lookup is
+    performed before the database transaction opens, retried up to twice (pure read), and the
+    returned values are persisted denormalised so later reads never call the catalogue. No cached
+    or default rate is ever substituted.
+  contact:
+    name: souscription-catalogue-service team
+    url: https://example.com/horizon-souscription/catalogue
+servers:
+  - url: https://souscription-catalogue-service.dev.svc.cluster.local:8443/v1
+    description: Development (cluster-internal, mTLS)
+  - url: https://souscription-catalogue-service.staging.svc.cluster.local:8443/v1
+    description: Staging (cluster-internal, mTLS)
+  - url: https://souscription-catalogue-service.prod.svc.cluster.local:8443/v1
+    description: Production (cluster-internal, mTLS)
+security:
+  - mutualTls: []
+tags:
+  - name: products
+paths:
+  /products/{code}:
+    parameters:
+      - name: code
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ProductDetail/properties/code' }
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/TraceParent'
+    get:
+      tags: [products]
+      operationId: getProduct
+      summary: Get the authoritative product definition and annual rate
+      description: |
+        Called once per draft validation and once per confirmation, outside any open transaction.
+        Returns 404 for an unknown code, which souscription-service maps to a 409/404 on its own
+        contract rather than to a 5xx.
+      responses:
+        '200':
+          description: The product, including the authoritative annualRate.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  securitySchemes:
+    mutualTls:
+      type: mutualTLS
+      description: |
+        TLS 1.3 with client-certificate authentication. The souscription-service workload identity
+        is accepted; other identities are rejected at the TLS layer.
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      schema: { type: string, maxLength: 64 }
+      description: Correlation identifier propagated from the gateway edge through souscription-service.
+    TraceParent:
+      name: traceparent
+      in: header
+      required: false
+      schema: { type: string }
+  responses:
+    NotFound:
+      description: Unknown product code.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/FieldErrors' }
+    InternalError:
+      description: Unexpected server error. Retried up to twice by souscription-service.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/FieldErrors' }
+  schemas:
+    ProductDetail:
+      $ref: '../shared-schemas/ProductDetail.json'
+    FieldErrors:
+      $ref: '../shared-schemas/FieldErrors.json'

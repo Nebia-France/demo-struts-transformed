@@ -1,0 +1,40 @@
+{
+  "communicationId": "souscription-web-to-souscription-gateway",
+  "from": "souscription-web",
+  "to": "souscription-gateway",
+  "sla": {
+    "availability": "99.9%",
+    "availabilityBasis": "OD-009 confirmed at 99.9%",
+    "responseTime": {
+      "p50": "150ms",
+      "p95": "600ms",
+      "p99": "1500ms"
+    },
+    "measurement": "Micrometer timers on the provider, compared against the consumer-side timeout"
+  },
+  "timeout": {
+    "value": "10s",
+    "source": "TARGET_APPLICATION_TOPOLOGY.json communications[].resilience.timeout"
+  },
+  "retry": {
+    "maxRetries": 0,
+    "backoff": "none",
+    "retryableConditions": [],
+    "nonRetryableConditions": [
+      "any 4xx response",
+      "HTTP 429"
+    ]
+  },
+  "circuitBreaker": {
+    "enabled": false
+  },
+  "bulkhead": {
+    "maxConcurrentCalls": 6
+  },
+  "fallback": "The SPA surfaces the gateway's problem+json message and keeps the wizard state in its signal store so the user can re-submit; a confirmation can be safely re-submitted because it is idempotent on confirmationKey.",
+  "notes": [
+    "Browser-side. No automatic retry: a mutating request must not be replayed without the user's intent.",
+    "6 concurrent requests is the practical per-origin HTTP/1.1 browser limit; HTTP/2 multiplexing makes it advisory."
+  ],
+  "verification": "Fault-injection test asserting the timeout, the retry count and the circuit-breaker transitions, plus a load test showing p99 inside the timeout."
+}

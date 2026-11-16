@@ -1,0 +1,107 @@
+openapi: 3.1.0
+info:
+  title: Horizon Catalogue Service Internal API (consumed by souscription-gateway)
+  version: 1.0.0
+  description: |
+    Internal, cluster-only contract published by souscription-catalogue-service and consumed by
+    souscription-gateway. Derived from the in-process CatalogService of the source application
+    (three static products seeded at startup, no datastore).
+
+    souscription-catalogue-service is the single owner of the product annual rate. The rate is
+    serialised as a string with scale 6 so the DECIMAL(8,6) value never changes on the wire.
+    The service is unreachable from outside the cluster and requires mTLS (OD-007).
+  contact:
+    name: souscription-catalogue-service team
+    url: https://example.com/horizon-souscription/catalogue
+servers:
+  - url: https://souscription-catalogue-service.dev.svc.cluster.local:8443/v1
+    description: Development (cluster-internal, mTLS)
+  - url: https://souscription-catalogue-service.staging.svc.cluster.local:8443/v1
+    description: Staging (cluster-internal, mTLS)
+  - url: https://souscription-catalogue-service.prod.svc.cluster.local:8443/v1
+    description: Production (cluster-internal, mTLS)
+security:
+  - mutualTls: []
+tags:
+  - name: products
+paths:
+  /products:
+    get:
+      tags: [products]
+      operationId: listProducts
+      summary: List the savings products
+      description: |
+        Returns the whole catalogue (three products). No pagination is defined: the collection is
+        static and bounded. Safe and side-effect free, so the caller's 2 retries are harmless.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/TraceParent'
+      responses:
+        '200':
+          description: The catalogue.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProductSummary' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /products/{code}:
+    parameters:
+      - name: code
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ProductSummary/properties/code' }
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/TraceParent'
+    get:
+      tags: [products]
+      operationId: getProduct
+      summary: Get one product by code
+      description: Returns 404 for an unknown code, preserving the legacy CatalogService.find behaviour.
+      responses:
+        '200':
+          description: The product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  securitySchemes:
+    mutualTls:
+      type: mutualTLS
+      description: |
+        TLS 1.3 with client-certificate authentication. Only the souscription-gateway and
+        souscription-service workload identities are accepted; every other identity is rejected
+        at the TLS layer.
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      schema: { type: string, maxLength: 64 }
+      description: Correlation identifier propagated from the gateway edge.
+    TraceParent:
+      name: traceparent
+      in: header
+      required: false
+      schema: { type: string }
+      description: W3C trace context propagated from the caller.
+  responses:
+    NotFound:
+      description: Unknown product code.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/FieldErrors' }
+    InternalError:
+      description: Unexpected server error. Retryable by the caller.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/FieldErrors' }
+  schemas:
+    ProductSummary:
+      $ref: '../shared-schemas/ProductSummary.json'
+    ProductDetail:
+      $ref: '../shared-schemas/ProductDetail.json'
+    FieldErrors:
+      $ref: '../shared-schemas/FieldErrors.json'

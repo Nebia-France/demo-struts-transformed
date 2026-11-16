@@ -1,0 +1,108 @@
+# Fragment statique du document OpenAPI public /api/v1 (W1-T03).
+#
+# Porte ce qui ne peut pas etre exprime sur une methode de ressource : le schema de securite
+# csrfToken reference par chaque operation modifiante, les tags et la description du contrat.
+# SmallRye OpenAPI fusionne ce fragment avec le document issu des annotations.
+#
+# La source de verite est global/contracts/souscription-web-to-souscription-gateway/openapi.yaml ;
+# toute divergence est une rupture de contrat (voir docs/api-versioning.md).
+openapi: 3.1.0
+info:
+  title: Horizon Souscription Public API
+  version: 1.0.0
+  description: |
+    Public contract between the Angular SPA (souscription-web) and the API gateway
+    (souscription-gateway). It replaces the eight legacy `*.do` Struts front-controller actions;
+    the `*.do` paths are explicitly not a preserved contract.
+
+    Monetary amounts and the product annual rate are JSON strings so BigDecimal scales survive the
+    wire unchanged. Errors use RFC 7807 `application/problem+json`. No authentication exists
+    (preserved from the source); state-changing requests require the double-submit CSRF token
+    (OD-006). SPA and gateway share one origin behind a single ingress (OD-004), so CORS is not
+    part of this contract.
+
+    Allowed HTTP methods at the edge: `GET`, `HEAD`, `POST`, `PUT`
+    (`gateway.security.allowed-methods`). Any other method is rejected with `405` carrying an
+    `Allow` header and a `problem+json` body, before any route is selected. `PUT` is added to the
+    source set (`GET`, `HEAD`, `POST`) because the draft sub-resources are updated with `PUT`;
+    see `docs/edge-filters.md`.
+  contact:
+    name: Horizon Souscription platform team
+    url: https://example.com/horizon-souscription
+tags:
+  - name: catalogue
+    description: Product catalogue reads, proxied to souscription-catalogue-service.
+  - name: simulation
+    description: Compound-interest projection, proxied to souscription-simulation-service.
+  - name: subscription
+    description: Subscription draft and confirmation, proxied to souscription-service.
+  - name: security
+    description: CSRF token issuance at the edge.
+components:
+  schemas:
+    Problem:
+      # RFC 7807 : representation unique de toute reponse de statut >= 400 (W2-T03).
+      # Remplace les sept pages d'erreur du descripteur de deploiement source.
+      # Le tableau des statuts est gele dans docs/error-mapping.md.
+      type: object
+      description: |
+        Problem Details RFC 7807. `detail` ne contient jamais de trace ni de detail interne :
+        la correlation se fait par `instance`, renseigne avec l'identifiant de requete.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI stable du type de probleme.
+          example: https://example.com/horizon-souscription/problems/not-found
+        title:
+          type: string
+          description: Libelle court et stable du type de probleme.
+          example: Ressource introuvable
+        status:
+          type: integer
+          format: int32
+          description: Statut HTTP, identique a celui de la reponse.
+          example: 404
+        detail:
+          type: string
+          description: Precision sur cette occurrence, sans detail interne.
+        instance:
+          type: string
+          description: Identifiant de requete, utilise pour la correlation.
+          example: 6f0f6a0c-6c1a-4c4e-9b8f-6d1f7a6a0c11
+        errors:
+          # Forme de global/contracts/shared-schemas/FieldErrors.json (W7-T03) : une entree par
+          # champ rejete, relayee telle quelle depuis le service validant, code compris.
+          type: array
+          description: Erreurs de validation, une entree par champ rejete.
+          items:
+            type: object
+            required: [field, message]
+            additionalProperties: false
+            properties:
+              field:
+                type: string
+                example: initialAmount
+              message:
+                type: string
+              code:
+                type: string
+                description: Identifiant stable de la regle, fourni par le service validant.
+      additionalProperties: false
+  responses:
+    Problem:
+      description: Erreur normalisee RFC 7807.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  securitySchemes:
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: |
+        Double-submit CSRF token (OD-006). The value must equal the `XSRF-TOKEN` cookie issued by
+        `GET /csrf-token`. Required on POST, PUT, PATCH and DELETE; ignored on GET and HEAD.
+        This is not authentication: the API is anonymous, exactly as the source application was.

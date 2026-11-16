@@ -1,0 +1,23 @@
+####
+# Exposition interne du gateway. L'exposition publique est assuree par l'ingress partage
+# (modele same-origin avec la SPA souscription-web : aucune configuration CORS necessaire).
+####
+apiVersion: v1
+kind: Service
+metadata:
+  name: souscription-gateway
+  labels:
+    app: souscription-gateway
+spec:
+  type: ClusterIP
+  selector:
+    app: souscription-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    # Interface de management (sondes /q/health/*, /q/metrics) : usage interne au cluster
+    # uniquement. L'ingress partage ne cible que le port "http" et ne publie jamais /q/*.
+    - name: management
+      port: 9000
+      targetPort: management

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: souscription-catalogue-service
+  labels: { app: souscription-catalogue-service }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: souscription-catalogue-service }
+  template:
+    metadata:
+      labels: { app: souscription-catalogue-service }
+      # Prometheus scraping on the management port only (W5-T02). The ServiceMonitor object
+      # comes with plan 25; these annotations cover the annotation-based discovery path.
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+        prometheus.io/path: "/q/metrics"
+    spec:
+      # Must exceed quarkus.shutdown.timeout=30S so the drain completes before SIGKILL (W3-T05).
+      terminationGracePeriodSeconds: 40
+      # Pod-level hardening (W3-T07, NFG-008). uid 185 is the non-root default user of the
+      # UBI9 openjdk-21-runtime base image used by both Jib and Dockerfile.jvm.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 185
+        runAsGroup: 0
+        fsGroup: 0
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        # Required because readOnlyRootFilesystem: true — the JVM needs a writable /tmp
+        # (hsperfdata, temporary files). Kept as an emptyDir rather than relaxing the setting.
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        # Server certificate, private key and CA bundle for mTLS on 8443 (W6-T01).
+        # Provisioned by the internal CA as a secret; never part of the image.
+        - name: tls
+          secret:
+            secretName: souscription-catalogue-service-tls
+            defaultMode: 0440
+      containers:
+        - name: catalogue
+          image: financiere-horizon/souscription-catalogue-service:1.0.0
+          ports:
+            - { name: https, containerPort: 8443 }
+            - { name: management, containerPort: 9000 }
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: tls, mountPath: /etc/tls, readOnly: true }
+          # Tracing (W5-T03, NFG-014): the collector address and the sampling ratio are
+          # injected, never hardcoded in the image or in application.properties.
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability.svc.cluster.local:4317"
+            - name: OTEL_SAMPLING_RATIO
+              value: "0.1"
+          # Heap is bound to the cgroup memory limit, not to the node memory (W3-T07):
+          # -XX:MaxRAMPercentage=70 is baked into the image entry point (Jib
+          # quarkus.jib.jvm-arguments and Dockerfile.jvm), so 70 % of the 320Mi limit
+          # (~224Mi max heap) leaves room for metaspace, code cache and direct buffers.
+          resources:
+            requests: { memory: "160Mi", cpu: "100m" }
+            limits:   { memory: "320Mi", cpu: "500m" }
+          # Probes on the management port 9000 (W5-T01): the business port 8443 is left to
+          # traffic only, and liveness no longer depends on the API surface.
+          # initialDelaySeconds: 2 derived from the measured 0.865 s start-up (NFG-002, plan 03).
+          readinessProbe:
+            httpGet: { path: /q/health/ready, port: 9000 }
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /q/health/live, port: 9000 }
+            initialDelaySeconds: 2
+            periodSeconds: 10

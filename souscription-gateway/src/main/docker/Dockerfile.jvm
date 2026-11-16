@@ -1,0 +1,23 @@
+####
+# Image conteneur JVM (fast-jar) pour souscription-gateway.
+# Remplace la chaine de deploiement Cargo / Tomcat 10 (W0-T06).
+# Construction :
+#   mvn -f souscription-gateway/pom.xml clean package
+#   docker build -f souscription-gateway/src/main/docker/Dockerfile.jvm -t souscription-gateway:local souscription-gateway
+# Execution non-root (UID 185, utilisateur par defaut des images UBI9 OpenJDK).
+####
+FROM registry.access.redhat.com/ubi9/openjdk-21-runtime:1.21
+
+ENV JAVA_OPTS_APPEND="-XX:MaxRAMPercentage=70 -Dquarkus.http.host=0.0.0.0"
+
+COPY --chown=185 target/quarkus-app/lib/ /deployments/lib/
+COPY --chown=185 target/quarkus-app/*.jar /deployments/
+COPY --chown=185 target/quarkus-app/app/ /deployments/app/
+COPY --chown=185 target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+EXPOSE 9000
+
+USER 185
+
+ENTRYPOINT ["java", "-jar", "/deployments/quarkus-run.jar"]

@@ -1,0 +1,125 @@
+groups:
+  - name: souscription-service.slo
+    interval: 30s
+    rules:
+      # SLI de disponibilite NFG-010 : ratio des requetes non-5xx, partitionne par classe de
+      # statut. Les 4xx ne sont pas des erreurs de service (validation, 404 de brouillon expire)
+      # et ne consomment pas le budget : les compter ferait sonner l'alerte sur un trafic
+      # parfaitement sain.
+      - record: souscription_service:availability:ratio_rate30m
+        expr: |
+          sum(rate(http_server_requests_seconds_count{application="souscription-service",outcome!="SERVER_ERROR"}[30m]))
+          /
+          sum(rate(http_server_requests_seconds_count{application="souscription-service"}[30m]))
+
+      - alert: SouscriptionServiceAvailabilityBelowSlo
+        expr: souscription_service:availability:ratio_rate30m < 0.999
+        for: 10m
+        labels:
+          severity: critical
+          service: souscription-service
+        annotations:
+          summary: "Disponibilite sous l'objectif 99,9 %"
+          description: >-
+            Le ratio de requetes servies sans erreur serveur est {{ $value | humanizePercentage }}
+            sur 30 minutes, sous l'objectif de 99,9 % (NFG-010). Verifier /q/health/ready, le pool
+            Agroal et les dependances catalogue et simulation.
+
+      # Latence : objectif NFG-008, p95 < 300 ms. L'histogramme http_server_requests_seconds est
+      # publie par le binder http-server de Micrometer.
+      - alert: SouscriptionServiceLatencyBudgetP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket{application="souscription-service"}[5m]))
+          ) > 0.300
+        for: 5m
+        labels:
+          severity: major
+          service: souscription-service
+        annotations:
+          summary: "p95 au-dela du budget de 300 ms"
+          description: >-
+            Le p95 des requetes HTTP depasse 300 ms sur 5 minutes (objectif NFG-008).
+            Correler avec agroal_awaiting_count et la latence des appels sortants.
+
+      - alert: SouscriptionServiceErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{application="souscription-service",outcome="SERVER_ERROR"}[5m]))
+          /
+          sum(rate(http_server_requests_seconds_count{application="souscription-service"}[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          service: souscription-service
+        annotations:
+          summary: "Taux d'erreur serveur superieur a 1 %"
+          description: >-
+            Plus de 1 % des requetes repondent en 5xx sur 5 minutes. Les traces de ces requetes
+            sont integralement conservees (tail sampling du collecteur, cf. OBSERVABILITY.md).
+
+  - name: souscription-service.pool
+    interval: 30s
+    rules:
+      # Reprise des deux regles de deploy/POOL_ALERTS.md (mitigation R-003).
+      - alert: SouscriptionServicePoolExhausted
+        expr: agroal_awaiting_count{datasource="default",application="souscription-service"} > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: souscription-service
+        annotations:
+          summary: "Pool JDBC epuise"
+          description: >-
+            Des requetes attendent une connexion : le pool (HORIZON_DB_POOL_MAX) est entierement
+            occupe. Verifier les requetes lentes avant toute augmentation (contrainte NFG-013 :
+            max-size x replicas <= 80 % de max_connections).
+
+      - alert: SouscriptionServicePoolAcquisitionLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(agroal_acquire_seconds_bucket{datasource="default",application="souscription-service"}[5m]))
+          ) > 0.300
+        for: 5m
+        labels:
+          severity: major
+          service: souscription-service
+        annotations:
+          summary: "Latence d'acquisition de connexion au-dela de 300 ms"
+          description: >-
+            Le p95 d'acquisition depasse l'objectif NFG-008 (300 ms) et approche le delai
+            configure (quarkus.datasource.jdbc.acquisition-timeout=3S), au-dela duquel les
+            requetes repondent 503 au lieu d'attendre.
+
+  - name: souscription-service.drafts
+    interval: 1m
+    rules:
+      # Reprise des deux regles de deploy/DRAFT_ALERTS.md (mitigation R-002).
+      - alert: SouscriptionServiceDraftPurgeIdle
+        expr: |
+          increase(horizon_draft_purged_total{application="souscription-service"}[1h]) == 0
+          and
+          increase(horizon_drafts_created_total{application="souscription-service"}[1h]) > 0
+        for: 1h
+        labels:
+          severity: major
+          service: souscription-service
+        annotations:
+          summary: "Purge des brouillons inactive malgre du trafic"
+          description: >-
+            Aucune ligne de subscription_draft purgee sur une heure alors que des brouillons sont
+            crees : scheduler desactive, transaction en echec ou horizon.draft.purge.cron errone.
+
+      - alert: SouscriptionServiceDraftAccumulation
+        expr: |
+          deriv(horizon_drafts_created_total{application="souscription-service"}[2h])
+          > deriv(horizon_draft_purged_total{application="souscription-service"}[2h])
+        for: 2h
+        labels:
+          severity: critical
+          service: souscription-service
+        annotations:
+          summary: "Accumulation de brouillons"
+          description: >-
+            Les creations depassent durablement les purges : la table subscription_draft croit
+            sans borne (mode de defaillance de R-002) et le critere de nombre de lignes stable de
+            NFG-011 est invalide.

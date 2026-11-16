@@ -1,0 +1,54 @@
+####
+# PROPRIETAIRE : equipe infrastructure / plateforme.
+# Ce fichier n'est pas modifiable par l'equipe applicative souscription-gateway : il est
+# versionne ici pour tracabilite, son application releve de l'infrastructure.
+#
+# Objet (CFG-011 / NFG-004) : les trois services aval (catalogue, simulation, subscription)
+# ne doivent etre joignables que depuis souscription-gateway, et jamais depuis l'exterieur
+# du cluster. On applique un refus par defaut sur l'ingress de ces trois services, puis
+# une autorisation explicite pour le seul gateway.
+####
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: downstream-services-default-deny-ingress
+  annotations:
+    owner: infrastructure-team
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - souscription-catalogue-service
+          - souscription-simulation-service
+          - souscription-service
+  policyTypes:
+    - Ingress
+  ingress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: downstream-services-allow-gateway
+  annotations:
+    owner: infrastructure-team
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - souscription-catalogue-service
+          - souscription-simulation-service
+          - souscription-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: souscription-gateway
+      ports:
+        - protocol: TCP
+          port: 8080

@@ -1,0 +1,27 @@
+<p class="intro">{{ labels.simulationIntroBefore }} <strong>{{ productName() }}</strong>. {{ labels.simulationIntroAfter }}</p>
+<form [formGroup]="form" (ngSubmit)="continue()" [attr.aria-busy]="status() === 'pending'">
+  <app-error-summary [serverErrors]="summary()" />
+  <section class="panel">
+    <h2>{{ labels.simulationHeading }}</h2>
+    <div class="panel-body">
+      <p class="required-legend"><span class="required">{{ labels.requiredMark }}</span> {{ labels.simulationRequiredLegend }}</p>
+      <div class="form-row"><label for="initial">{{ labels.initial }} <span class="required">{{ labels.requiredMark }}</span></label><div><input type="text" id="initial" formControlName="initial" size="14" maxlength="9" inputmode="decimal" required aria-describedby="initial-hint initial-error" [attr.aria-invalid]="hasError('initial')"> {{ labels.euroSuffix }}<p class="hint" id="initial-hint">{{ labels.initialHint }}</p><p class="field-error" id="initial-error">{{ fieldError('initial') }}</p></div></div>
+      <div class="form-row"><label for="monthly">{{ labels.monthly }} <span class="required">{{ labels.requiredMark }}</span></label><div><input type="text" id="monthly" formControlName="monthly" size="14" maxlength="9" inputmode="decimal" required aria-describedby="monthly-hint monthly-error" [attr.aria-invalid]="hasError('monthly')"> {{ labels.euroSuffix }}<p class="hint" id="monthly-hint">{{ labels.monthlyHint }}</p><p class="field-error" id="monthly-error">{{ fieldError('monthly') }}</p></div></div>
+      <div class="form-row"><label for="years">{{ labels.duration }} <span class="required">{{ labels.requiredMark }}</span></label><div><input type="text" id="years" formControlName="years" size="4" maxlength="2" inputmode="numeric" required aria-describedby="years-hint years-error" [attr.aria-invalid]="hasError('years')"> {{ labels.yearsSuffix }}<p class="hint" id="years-hint">{{ labels.durationHint }}</p><p class="field-error" id="years-error">{{ fieldError('years') }}</p></div></div>
+      <div class="inline-actions"><button type="button" [disabled]="inFlight()" (click)="recalculate()">{{ labels.recalculate }}</button></div>
+    </div>
+  </section>
+  @if (result(); as projection) {
+    <section class="panel"><h2>{{ labels.estimationHeading }}</h2><div class="panel-body">
+      <app-simulation-result
+        [initial]="projection.initialAmount"
+        [monthly]="projection.monthlyAmount"
+        [years]="projection.durationYears.toString()"
+        [contributed]="projection.contributed"
+        [gains]="gains()"
+        [finalCapital]="projection.finalCapital"
+        [ratePercent]="ratePercent()" />
+    </div></section>
+  }
+  <div class="actions"><a routerLink="/souscription/souscripteur">{{ labels.previous }}</a><button type="submit" [disabled]="inFlight()">{{ labels.continue }}</button></div>
+</form>

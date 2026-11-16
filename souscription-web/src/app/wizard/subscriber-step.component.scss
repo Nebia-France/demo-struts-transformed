@@ -1,0 +1,5 @@
+// Subscriber form rules from `application.css`: `.form-row`, inputs, `.required`,
+// `.required-legend`, `.field-error`, `.actions` and `.panel`.
+@use '../../styles/forms';
+@use '../../styles/panel';
+@use '../../styles/message';

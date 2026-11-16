@@ -1,0 +1,65 @@
+// Content rules ported from `application.css` (`.panel`, `.panel-body`, `.intro`,
+// `.fine-print`, `.hint`, `.instructions`, `.section-link`). The former descendant
+// selector `.panel-body p` crossed no component boundary in the source; here it is kept
+// component-local, so a panel body filled by a child component must import this partial
+// itself rather than rely on the cascade.
+
+p {
+  margin: 10px 0;
+}
+
+.intro {
+  margin-bottom: 18px;
+  color: #465361;
+}
+
+.panel {
+  margin: 0 0 18px;
+  border: 1px solid #9aa8b8;
+
+  h2 {
+    font-size: 0.95rem;
+    margin: 0;
+    padding: 6px 10px;
+    background: #dce5ef;
+    color: #173c60;
+    border-bottom: 1px solid #9aa8b8;
+  }
+}
+
+.panel-body {
+  padding: 9px 12px 12px;
+
+  > p:first-child {
+    margin-top: 2px;
+  }
+}
+
+.fine-print,
+.hint {
+  font-size: 0.8rem;
+  color: #535f6c;
+}
+
+.fine-print {
+  margin-bottom: 0;
+}
+
+.hint {
+  margin: 4px 0 0;
+}
+
+.instructions {
+  padding-left: 22px;
+  margin: 8px 0 12px;
+
+  li {
+    padding: 3px 0;
+  }
+}
+
+.section-link {
+  float: right;
+  font-weight: normal;
+  font-size: 0.8rem;
+}

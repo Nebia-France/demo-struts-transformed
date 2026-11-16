@@ -1,0 +1,29 @@
+# souscription-simulation-service - Quarkus fast-jar runtime image (jvm-only target).
+#
+# Base image pinned BY DIGEST (never a floating tag): UBI 9 OpenJDK 21 runtime,
+# tag 1.21 resolved on registry.access.redhat.com. Refresh the digest with:
+#   skopeo inspect docker://registry.access.redhat.com/ubi9/openjdk-21-runtime:1.21 | jq -r .Digest
+#
+# Build (after `mvn -f souscription-simulation-service/pom.xml clean package`):
+#   docker build -f src/main/docker/Dockerfile.jvm -t souscription-simulation-service:1.0.0-SNAPSHOT .
+# Run with a read-only root filesystem (enforced by the deployment manifest). The
+# only traffic port is the mTLS one (8443): there is no plaintext listener, and the
+# workload certificate, key and CA are mounted at run time, never baked in (W6-T01):
+#   docker run --read-only --tmpfs /tmp -p 8443:8443 \
+#     -v "$PWD/../target/dev-certs:/pki:ro" \
+#     -e TLS_CERT_PATH=/pki/server-cert.pem -e TLS_KEY_PATH=/pki/server-key.pem \
+#     -e TLS_CA_PATH=/pki/client-ca.pem souscription-simulation-service:1.0.0-SNAPSHOT
+FROM registry.access.redhat.com/ubi9/openjdk-21-runtime@sha256:360822c35c5741f542ab78fe123e6c4d9b68e0113a88d6e0250bb1f377b17f29
+
+ENV JAVA_OPTS_APPEND="-XX:MaxRAMPercentage=70 -Dfile.encoding=UTF-8"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+
+COPY --chown=185:0 target/quarkus-app/lib/ /deployments/lib/
+COPY --chown=185:0 target/quarkus-app/*.jar /deployments/
+COPY --chown=185:0 target/quarkus-app/app/ /deployments/app/
+COPY --chown=185:0 target/quarkus-app/quarkus/ /deployments/quarkus/
+
+# mTLS traffic port only. The management port (9000) is deliberately not exposed:
+# probes, /q/metrics and /q/openapi stay inside the cluster (W6-T02).
+EXPOSE 8443
+USER 185

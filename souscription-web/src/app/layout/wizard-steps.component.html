@@ -1,0 +1,9 @@
+<h2>{{ labels.stepsTitle }}</h2>
+<ol class="steps">
+  @for (label of steps; track label.index) {
+    <li [class.current]="step() === label.index">
+      @if (step() === label.index) { <span class="sr-only">{{ labels.currentStepMarker }}</span> }
+      {{ label.text }}
+    </li>
+  }
+</ol>

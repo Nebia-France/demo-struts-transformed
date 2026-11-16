@@ -1,0 +1,93 @@
+# souscription-simulation-service — network isolation instance (W6-T02, W6-T06).
+#
+# Instantiation only: the ClusterIP Service, the default-deny NetworkPolicy shape
+# and the absence of any Ingress or Route object come from the shared template
+# (NFG-019). This file carries the contracted allow-lists, nothing structural.
+# Render with:
+#   python3 .ci/templates/render-manifests.py souscription-simulation-service
+# which writes souscription-simulation-service/target/deploy/networkpolicy.yml.
+#
+# The capability this service exposes used to be an in-process method call inside the
+# monolith: it was unreachable by construction. Now that it crosses the network, the
+# only thing that keeps it as unreachable as before is this policy plus the mTLS
+# identity allow-list of plan 24 (application.properties, WorkloadIdentityFilter) —
+# two independent layers, so neither a mesh misconfiguration nor a certificate issued
+# to the wrong workload is sufficient on its own.
+#
+# Frozen inputs (both security policies agree, so the intersection is applied):
+#   global/contracts/souscription-gateway-to-souscription-simulation-service/security-policy.json
+#   global/contracts/souscription-service-to-souscription-simulation-service/security-policy.json
+#     network.publiclyReachable : false
+#     network.externalRoute     : none — the three backend services must be
+#                                 unreachable from outside the cluster (OD-007)
+#     network.ipAllowList       : cluster pod CIDR only, default-deny
+#
+# Deliberately absent, and that absence is the control:
+#   - no Ingress and no Route object: the service has no external entry point. The
+#     template emits none, so this cannot be reintroduced by a parameter;
+#   - no Service port for the management interface (9000): the probes, /q/metrics and
+#     /q/openapi stay reachable from the node and the scraper only, never published.
+# The only published port is the mTLS traffic port 8443 (the plaintext 8080 listener
+# does not exist: quarkus.http.insecure-requests=disabled).
+extends: ../../.ci/templates/deploy/quarkus-service-network.yml
+
+with:
+  name: souscription-simulation-service
+  part_of: souscription
+  traffic_port: 8443
+  management_port: 9000
+  # Exactly the two workloads named in the frozen contracts. souscription-web is
+  # NOT here — the SPA reaches the simulation through souscription-gateway, never
+  # directly. Anything absent from this list cannot connect at all.
+  ingress_callers:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: horizon
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: souscription-gateway
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: horizon
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: souscription-service
+  # Management port (9000): probes and /q/metrics only, and no Service publishes it.
+  # The metrics scraper is a pod, so it is selected like any other workload.
+  scrape_callers:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: observability
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+  # The kubelet probes from the node IP, outside the pod network, so it needs an
+  # ipBlock. The contracts restrict the allow-list to the cluster CIDR: this is the
+  # node CIDR of the target cluster, substituted at deploy time, never 0.0.0.0/0.
+  probe_cidr: 10.0.0.0/8
+  # Egress is an allow-list too: this service calls no other business service (its
+  # computation is in-process), so the only outbound traffic is telemetry and DNS.
+  egress_rules:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - protocol: TCP
+          port: 4317
+    # DNS only, so the OTLP collector name can be resolved.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://horizon-souscription.example.com/schemas/FieldErrors.json",
+  "title": "FieldErrors",
+  "type": "object",
+  "description": "RFC 7807 Problem Details extended with a field-level error array, replacing Struts ActionErrors and the ApplicationResources message keys. Media type application/problem+json. Propagated unchanged by souscription-gateway.",
+  "required": [
+    "type",
+    "title",
+    "status"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "format": "uri",
+      "default": "about:blank"
+    },
+    "title": {
+      "type": "string"
+    },
+    "status": {
+      "type": "integer",
+      "minimum": 400,
+      "maximum": 599
+    },
+    "detail": {
+      "type": "string"
+    },
+    "instance": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Value of the X-Correlation-Id header handled for this request."
+    },
+    "errors": {
+      "type": "array",
+      "description": "One entry per rejected field, in declaration order. Absent for non-validation problems.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "examples": [
+              "firstName",
+              "lastName",
+              "email",
+              "birthDate",
+              "initialAmount",
+              "monthlyAmount",
+              "durationYears"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable French message, identical in meaning to the legacy InputValidator message."
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable rule identifier."
+          }
+        }
+      }
+    }
+  }
+}

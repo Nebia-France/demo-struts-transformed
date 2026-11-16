@@ -1,0 +1,196 @@
+{
+  "views": {
+    "catalogue.jsp": [
+      "Votre parcours est incomplet ou votre session a expiré. Veuillez choisir un produit pour commencer une nouvelle demande.",
+      "Choisissez le placement qui correspond à votre projet, puis réalisez une simulation avant de compléter votre demande de souscription.",
+      "Nos solutions d'épargne",
+      "Comparez les trois profils de placement et consultez leurs caractéristiques avant de faire votre choix.",
+      "Comparaison des trois placements",
+      "Placement",
+      "Profil de risque",
+      "Taux annuel",
+      "illustratif",
+      "À partir de",
+      "Information",
+      "\">Consulter",
+      "Les niveaux de risque sont indicatifs. Le capital et les rendements ne sont pas garantis.",
+      "Comment souscrire ?",
+      "Consultez la fiche du produit de votre choix.",
+      "Renseignez vos informations et simulez votre épargne.",
+      "Vérifiez votre récapitulatif et confirmez votre demande de souscription.",
+      "Information importante",
+      "Les projections reposent sur les hypothèses de calcul indiquées. Les performances futures ne sont pas garanties."
+    ],
+    "confirmation.jsp": [
+      "Votre demande de souscription a bien été enregistrée.",
+      "Accusé d'enregistrement",
+      "Référence de la demande",
+      "Enregistrée le",
+      "(Paris)",
+      "Produit",
+      "Souscripteur",
+      "Conservez la référence de votre demande.",
+      "\">Retour au catalogue"
+    ],
+    "erreur.jsp": [
+      "La demande n'a pas pu être traitée.",
+      "Le formulaire a expiré ou son jeton de sécurité est invalide. Rechargez la page avant de réessayer.",
+      "Ce récapitulatif n'est plus à jour. Revenez à la simulation pour vérifier votre demande.",
+      "La page ou le produit demandé est introuvable.",
+      "La demande est invalide ou le service est indisponible. Aucune confirmation n'est émise sur cette page.",
+      "\">Retour au catalogue"
+    ],
+    "fragments/csrf.jspf": [],
+    "fragments/errors.jspf": [
+      "Votre demande ne peut pas être validée :"
+    ],
+    "fragments/footer.jspf": [
+      "Financière Horizon — Épargne & placements",
+      "Souscription en ligne"
+    ],
+    "fragments/header.jspf": [
+      "| Financière Horizon",
+      "Aller au contenu",
+      "Extranet Financière Horizon",
+      "Service épargne & placements",
+      "FH",
+      "FINANCIÈRE HORIZON",
+      "ÉPARGNE & PLACEMENTS",
+      "Espace souscription",
+      "Votre projet, étape par étape",
+      "\" class=\" \">Nos placements",
+      "Souscription en ligne",
+      "VOTRE SOUSCRIPTION",
+      "Étape actuelle :",
+      "Choix du produit",
+      "Souscripteur",
+      "Simulation",
+      "Récapitulatif",
+      "Confirmation",
+      "\">Accueil",
+      "> Épargne >",
+      "Navigation principale"
+    ],
+    "fragments/result.jspf": [
+      "Résultat indicatif de la simulation",
+      "Versement initial",
+      "Versement mensuel",
+      "Durée du placement",
+      "an(s)",
+      "Total de vos versements",
+      "Gains estimés, hors frais et fiscalité",
+      "Capital final estimé",
+      "Hypothèse constante de",
+      "% par an, capitalisation mensuelle et versements en fin de mois. Hors frais, fiscalité et inflation. Rendement non garanti."
+    ],
+    "produit.jsp": [
+      "Consultez les caractéristiques de",
+      "avant de commencer votre demande.",
+      "— caractéristiques",
+      "Profil de risque",
+      "Taux annuel nominal illustratif",
+      "Versement initial",
+      "De 100,00 à 100 000,00 €",
+      "Versements mensuels",
+      "De 0,00 à 2 000,00 €",
+      "Durée simulée",
+      "De 1 à 30 ans",
+      "Condition d'âge",
+      "Souscripteur majeur",
+      "La simulation repose sur un taux constant, sans garantie de capital ni de performance. Frais et fiscalité non pris en compte.",
+      "\">< Retour au catalogue",
+      "Souscrire à ce produit >"
+    ],
+    "recapitulatif.jsp": [
+      "Vérifiez les informations ci-dessous avant de confirmer votre demande de souscription.",
+      "Produit et souscripteur",
+      "\">Modifier",
+      "Produit sélectionné",
+      "Souscripteur",
+      "Adresse électronique",
+      "Date de naissance",
+      "Votre projet d'épargne",
+      "checked",
+      "Je confirme l'exactitude des informations saisies et avoir pris connaissance des hypothèses de simulation et de l'absence de garantie de rendement.",
+      "\">< Précédent",
+      "Confirmer la souscription >"
+    ],
+    "simulation.jsp": [
+      "Définissez votre projet pour",
+      ". Vous pouvez recalculer la simulation avant de poursuivre.",
+      "Paramètres du placement",
+      "Tous les champs sont obligatoires. Saisissez les montants sans séparateur de milliers.",
+      "Versement initial",
+      "\" aria-describedby=\"initial-hint initial-error\" aria-invalid=\" \"> €",
+      "De 100,00 à 100 000,00 €.",
+      "Versement mensuel",
+      "\" aria-describedby=\"monthly-hint monthly-error\" aria-invalid=\" \"> €",
+      "De 0,00 à 2 000,00 €, en fin de mois.",
+      "Durée",
+      "\" aria-describedby=\"years-hint years-error\" aria-invalid=\" \"> an(s)",
+      "Un nombre entier de 1 à 30 ans.",
+      "Recalculer la simulation",
+      "Votre estimation",
+      "\">< Précédent",
+      "Continuer >"
+    ],
+    "souscripteur.jsp": [
+      "Produit sélectionné :",
+      ". Renseignez les informations du souscripteur.",
+      "Vos informations personnelles",
+      "Tous les champs sont obligatoires.",
+      "Prénom",
+      "\" aria-describedby=\"firstName-error\" aria-invalid=\" \">",
+      "Nom",
+      "\" aria-describedby=\"lastName-error\" aria-invalid=\" \">",
+      "Adresse électronique",
+      "\" aria-describedby=\"email-hint email-error\" aria-invalid=\" \">",
+      "Exemple : prenom.nom@example.com",
+      "Date de naissance",
+      "\" aria-describedby=\"birthDate-hint birthDate-error\" aria-invalid=\" \">",
+      "JJ/MM/AAAA — réservé aux personnes de 18 ans et plus.",
+      "\">< Changer de produit",
+      "Continuer >"
+    ]
+  },
+  "backend": {
+    "src/main/java/fr/demo/souscription/service/CatalogService.java": [
+      "Horizon Prudent",
+      "Une hypothèse de progression modérée pour découvrir le fonctionnement de l'épargne.",
+      "Horizon Équilibre",
+      "Une hypothèse intermédiaire pour construire un projet dans la durée.",
+      "Horizon Dynamique",
+      "Une hypothèse de progression plus élevée, associée à un profil de risque supérieur."
+    ],
+    "src/main/java/fr/demo/souscription/service/InputValidator.java": [
+      "Saisissez une adresse électronique valide (254 caractères maximum).",
+      "Saisissez une date valide au format JJ/MM/AAAA.",
+      "La date de naissance ne peut pas être dans le futur.",
+      "La souscription est réservée aux personnes majeures.",
+      "Saisissez votre",
+      "(1 à 80 caractères, sans caractère de contrôle).",
+      "Souscripteur invalide",
+      "Le versement initial doit être compris entre 100,00 et 100 000,00 €.",
+      "La mensualité doit être comprise entre 0,00 et 2 000,00 €.",
+      "La durée doit être un nombre entier de 1 à 30 ans.",
+      "Utilisez au maximum deux décimales, sans séparateur de milliers."
+    ],
+    "src/main/java/fr/demo/souscription/service/SimulationService.java": [
+      "Paramètres de simulation invalides"
+    ],
+    "src/main/java/fr/demo/souscription/service/SubscriptionService.java": [
+      "Parcours incomplet"
+    ],
+    "src/main/java/fr/demo/souscription/model/Subscription.java": [
+      "dd/MM/yyyy 'à' HH:mm"
+    ],
+    "src/main/java/fr/demo/souscription/repository/SubscriptionRepository.java": [
+      "Schéma H2 absent",
+      "INSERT INTO subscriptions (reference, confirmation_key, product_code,",
+      "product_name, product_profile, annual_rate, first_name, last_name, email,",
+      "birth_date, initial_amount, monthly_amount, duration_years, contributed,",
+      "final_capital, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "SELECT * FROM subscriptions WHERE confirmation_key = ?"
+    ]
+  }
+}

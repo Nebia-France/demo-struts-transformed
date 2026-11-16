@@ -1,0 +1,91 @@
+#
+# Politique reseau de souscription-service (W6-T03).
+#
+# Exigence : le service ne doit pas etre joignable depuis l'exterieur du cluster
+# (security-policy.json, network.publiclyReachable = false, externalRoute = none, OD-007).
+# Aucun Ingress, aucune Route et aucun Service de type NodePort/LoadBalancer n'existe pour ce
+# service : le seul chemin entrant est le Service ClusterIP, et il est ici restreint a la seule
+# charge de travail souscription-gateway.
+#
+# Entree : port 8443 (mTLS), depuis souscription-gateway uniquement.
+# Sortie : catalogue, simulation, base PostgreSQL, collecteur OTLP, DNS. Rien d'autre.
+# Le durcissement est complete par le plan 33 (secrets et image).
+#
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: souscription-service
+  labels:
+    app.kubernetes.io/name: souscription-service
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: souscription-service
+  # Les deux types sont declares : sans "Egress" dans policyTypes, les regles de sortie
+  # ci-dessous ne seraient pas evaluees et la sortie resterait totalement ouverte.
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: souscription-gateway
+      ports:
+        - protocol: TCP
+          port: 8443
+    # Scrutation des metriques et des sondes par la plateforme d'observabilite. Restreinte au
+    # namespace de supervision : c'est une exception explicite, pas une ouverture generale.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: horizon-observability
+      ports:
+        - protocol: TCP
+          port: 8443
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: souscription-catalogue-service
+      ports:
+        - protocol: TCP
+          port: 8443
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: souscription-simulation-service
+      ports:
+        - protocol: TCP
+          port: 8443
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: souscription-postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: horizon-observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - protocol: TCP
+          port: 4317
+    # Resolution DNS : sans cette regle, une politique de sortie restrictive casse la resolution
+    # des noms de service et toutes les regles ci-dessus deviennent inoperantes.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

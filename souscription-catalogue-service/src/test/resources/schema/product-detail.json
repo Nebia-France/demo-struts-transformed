@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProductDetail",
+  "description": "Fiche produit - extrait de META-INF/openapi-contract-v1.yaml",
+  "type": "object",
+  "required": ["code", "name", "profile", "description", "annualRate", "ratePercent"],
+  "additionalProperties": false,
+  "properties": {
+    "code": { "type": "string" },
+    "name": { "type": "string" },
+    "profile": { "type": "string" },
+    "description": { "type": "string" },
+    "annualRate": { "type": "number", "multipleOf": 0.000001 },
+    "ratePercent": { "type": "number" }
+  }
+}

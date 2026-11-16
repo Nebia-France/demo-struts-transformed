@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>fr.demo</groupId>
+  <artifactId>souscription-gateway</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>Financière Horizon - Souscription Gateway</name>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+    <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+    <quarkus.platform.version>3.20.6.2</quarkus.platform.version>
+    <cucumber.version>7.20.1</cucumber.version>
+    <wiremock.version>3.13.2</wiremock.version>
+    <!-- Montees de correctif imposees par la revue CVE finale (W7-T04, docs/cve-review.md) :
+         aucune version de plateforme Quarkus 3.20 posterieure a 3.20.6.2 n'est publiee, les
+         correctifs sont donc appliques au-dessus du BOM, dans la meme ligne mineure. -->
+    <netty.version>4.1.140.Final</netty.version>
+    <jackson.version>2.18.12</jackson.version>
+    <vertx.version>4.5.36</vertx.version>
+    <guava.version>33.8.0-jre</guava.version>
+    <failureaccess.version>1.0.3</failureaccess.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Declares avant le BOM Quarkus : la premiere declaration gagne. -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-core</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-codegen</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-web</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-web-common</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-web-client</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-auth-common</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-bridge-common</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-uri-template</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-grpc</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-grpc-common</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-grpc-client</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-grpc-server</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <!-- Guava (transitif de grpc-core) : CVE-2026-102554 corrige en 33.7.2, aucune 33.4.x
+           corrigee ; meme version majeure (politique de compatibilite Guava), voir cve-review.md. -->
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>failureaccess</artifactId>
+        <version>${failureaccess.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${quarkus.platform.group-id}</groupId>
+        <artifactId>${quarkus.platform.artifact-id}</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-arc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-rest-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-rest-client-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-openapi</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-health</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-opentelemetry</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-vertx-http</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-reactive-routes</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-validator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-config-yaml</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-logging-json</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-java</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-junit-platform-engine</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-suite</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- Exportateur de spans en memoire de TracingTest (W6-T04) ; version geree par le BOM. -->
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-testing</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.wiremock</groupId>
+      <artifactId>wiremock-standalone</artifactId>
+      <version>${wiremock.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-maven-plugin</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build</goal>
+              <goal>generate-code</goal>
+              <goal>generate-code-tests</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <!-- Les noms de parametres sont conserves : le chemin de propriete des violations de
+               validation alimente le membre "errors" des reponses problem+json (W2-T03). -->
+          <parameters>true</parameters>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/GatewayCucumberTest.java</exclude>
+          </excludes>
+          <!-- gateway.csrf.signing-key n'a pas de valeur par defaut : le secret est fourni par
+               l'environnement. Les tests injectent une cle de test, jamais un secret de prod. -->
+          <environmentVariables>
+            <CSRF_SIGNING_KEY>test-only-csrf-signing-key</CSRF_SIGNING_KEY>
+            <!-- Aucun collecteur n'est joint par la suite (SDK inactif en %test, exportateur en
+                 memoire pour TracingTest) : la valeur ne sert qu'a resoudre la reference. -->
+            <OTEL_COLLECTOR_ENDPOINT>http://127.0.0.1:4317</OTEL_COLLECTOR_ENDPOINT>
+          </environmentVariables>
+          <!-- Sans le LogManager JBoss, la JVM de test journalise par le JUL du JDK en texte libre :
+               la configuration console JSON asynchrone ne s'appliquerait pas et LogHygieneTest ne
+               verifierait pas le format reellement produit (W6-T03). -->
+          <systemPropertyVariables>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <!-- Suite de chaos et de charge (W5-T04) : ChaosIT injecte de vraies pannes aval et
+               dure plus longtemps qu'un test unitaire, d'ou l'execution en phase d'integration.
+               Le profil cucumber restreint cette liste a son propre lanceur. -->
+          <includes>
+            <include>**/*IT.java</include>
+          </includes>
+          <environmentVariables>
+            <CSRF_SIGNING_KEY>test-only-csrf-signing-key</CSRF_SIGNING_KEY>
+            <!-- Aucun collecteur n'est joint par la suite (SDK inactif en %test, exportateur en
+                 memoire pour TracingTest) : la valeur ne sert qu'a resoudre la reference. -->
+            <OTEL_COLLECTOR_ENDPOINT>http://127.0.0.1:4317</OTEL_COLLECTOR_ENDPOINT>
+          </environmentVariables>
+          <!-- Sans le LogManager JBoss, la JVM de test journalise par le JUL du JDK en texte libre :
+               la configuration console JSON asynchrone ne s'appliquerait pas et LogHygieneTest ne
+               verifierait pas le format reellement produit (W6-T03). -->
+          <systemPropertyVariables>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
+        <!-- 12.1.0 : la 10.0.4 lit un schema de base NVD (9.0) qui n'est plus alimente. -->
+        <version>12.1.0</version>
+        <configuration>
+          <failBuildOnCVSS>7</failBuildOnCVSS>
+          <!-- Cle d'API NVD fournie par l'environnement (secret CI), jamais versionnee. -->
+          <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+          <!-- OSS Index exige desormais une authentification Sonatype (401 sans identifiants) et
+               n'est pas joignable depuis le poste (magasin de confiance) : analyseur desactive.
+               Le verdict repose sur la base NVD, recoupe par une requete OSV (docs/cve-review.md). -->
+          <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
+          <formats>
+            <format>HTML</format>
+            <format>JSON</format>
+          </formats>
+          <!-- Exceptions justifiees et datees uniquement : voir docs/cve-review.md. -->
+          <suppressionFiles>
+            <suppressionFile>${project.basedir}/dependency-check-suppressions.xml</suppressionFile>
+          </suppressionFiles>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>cucumber</id>
+      <properties>
+        <!-- Aucune source de generation de code : le mojo generate-code(-tests) re-analyse la ligne
+             de commande Maven et rejette une apostrophe dans -Dcucumber.filter.name. -->
+        <quarkus.generate-code.skip>true</quarkus.generate-code.skip>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <environmentVariables>
+                <!-- Le bootstrap @QuarkusTest relit aussi MAVEN_CMD_LINE_ARGS (profils actifs) et
+                     rejetterait l'apostrophe du filtre : seule l'activation du profil est transmise. -->
+                <MAVEN_CMD_LINE_ARGS>-Pcucumber</MAVEN_CMD_LINE_ARGS>
+              </environmentVariables>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>**/GatewayCucumberTest.java</include>
+              </includes>
+              <environmentVariables>
+                <CSRF_SIGNING_KEY>test-only-csrf-signing-key</CSRF_SIGNING_KEY>
+                <!-- La gate remplace ce point par son collecteur OTLP local (GatewayUnderTest). -->
+                <OTEL_COLLECTOR_ENDPOINT>http://127.0.0.1:4317</OTEL_COLLECTOR_ENDPOINT>
+                <MAVEN_CMD_LINE_ARGS>-Pcucumber</MAVEN_CMD_LINE_ARGS>
+              </environmentVariables>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

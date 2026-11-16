@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: souscription-catalogue-service
+  labels: { app: souscription-catalogue-service }
+spec:
+  selector:
+    matchLabels: { app: souscription-catalogue-service }
+  endpoints:
+    # "management" is the port name declared in deploy/service.yaml (9000). Scraping the
+    # management port only keeps /q/metrics out of the application perimeter (8443).
+    - port: management
+      path: /q/metrics
+      interval: 30s

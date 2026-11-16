@@ -1,0 +1,168 @@
+# Regles d'enregistrement et d'alerte du SLI de disponibilite 99,9 % de souscription-gateway (W6-T02).
+# Definition du SLI, fenetres et seuils : docs/observability.md.
+# SLI = 1 - (requetes 5xx / requetes totales) mesure a la passerelle sur http_server_requests.
+# Budget d'erreur = 0,001 ; taux de consommation = ratio d'erreurs / 0,001.
+# Chargement dans Prometheus Operator : equipe plateforme d'observabilite.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: souscription-gateway-slo
+  labels:
+    app: souscription-gateway
+spec:
+  groups:
+    - name: souscription-gateway-sli
+      interval: 30s
+      rules:
+        - record: gateway:http_server_errors:ratio_rate5m
+          expr: |
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway", status=~"5.."}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway"}[5m]))
+        - record: gateway:http_server_errors:ratio_rate30m
+          expr: |
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway", status=~"5.."}[30m]))
+            /
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway"}[30m]))
+        - record: gateway:http_server_errors:ratio_rate1h
+          expr: |
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway", status=~"5.."}[1h]))
+            /
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway"}[1h]))
+        - record: gateway:http_server_errors:ratio_rate2h
+          expr: |
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway", status=~"5.."}[2h]))
+            /
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway"}[2h]))
+        - record: gateway:http_server_errors:ratio_rate6h
+          expr: |
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway", status=~"5.."}[6h]))
+            /
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway"}[6h]))
+        - record: gateway:http_server_errors:ratio_rate1d
+          expr: |
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway", status=~"5.."}[1d]))
+            /
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway"}[1d]))
+        - record: gateway:http_server_errors:ratio_rate3d
+          expr: |
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway", status=~"5.."}[3d]))
+            /
+            sum(rate(http_server_requests_seconds_count{job="souscription-gateway"}[3d]))
+        - record: gateway:http_server_availability:ratio_rate30d
+          expr: |
+            1 - (
+              sum(rate(http_server_requests_seconds_count{job="souscription-gateway", status=~"5.."}[30d]))
+              /
+              sum(rate(http_server_requests_seconds_count{job="souscription-gateway"}[30d]))
+            )
+
+    - name: souscription-gateway-slo-burn-rate
+      rules:
+        # Page : 2 % du budget en 1 h (taux 14,4) ou 5 % en 6 h (taux 6).
+        - alert: GatewayAvailabilityBudgetBurnFast
+          expr: |
+            (
+              gateway:http_server_errors:ratio_rate1h > (14.4 * 0.001)
+              and
+              gateway:http_server_errors:ratio_rate5m > (14.4 * 0.001)
+            )
+            or
+            (
+              gateway:http_server_errors:ratio_rate6h > (6 * 0.001)
+              and
+              gateway:http_server_errors:ratio_rate30m > (6 * 0.001)
+            )
+          for: 2m
+          labels:
+            severity: page
+            slo: souscription-gateway-availability-99.9
+          annotations:
+            summary: "souscription-gateway consomme rapidement son budget d'erreur (SLO 99,9 %)"
+            description: >-
+              Ratio de 5xx a la passerelle : {{ $value | humanizePercentage }}.
+              Verifier les disjoncteurs (ft_circuitbreaker_state_current) et les aretes aval.
+            runbook: docs/observability.md#5-alertes-par-taux-de-consommation-du-budget-deployalertsyaml
+        # Ticket : 10 % du budget en 1 j (taux 3) ou en 3 j (taux 1).
+        - alert: GatewayAvailabilityBudgetBurnSlow
+          expr: |
+            (
+              gateway:http_server_errors:ratio_rate1d > (3 * 0.001)
+              and
+              gateway:http_server_errors:ratio_rate2h > (3 * 0.001)
+            )
+            or
+            (
+              gateway:http_server_errors:ratio_rate3d > (1 * 0.001)
+              and
+              gateway:http_server_errors:ratio_rate6h > (1 * 0.001)
+            )
+          for: 15m
+          labels:
+            severity: ticket
+            slo: souscription-gateway-availability-99.9
+          annotations:
+            summary: "souscription-gateway consomme lentement son budget d'erreur (SLO 99,9 %)"
+            description: "Ratio de 5xx a la passerelle : {{ $value | humanizePercentage }}."
+            runbook: docs/observability.md#5-alertes-par-taux-de-consommation-du-budget-deployalertsyaml
+
+    - name: souscription-gateway-diagnostics
+      rules:
+        - alert: GatewayCircuitBreakerOpen
+          expr: max by (method) (ft_circuitbreaker_state_current{job="souscription-gateway", state="open"}) == 1
+          for: 5m
+          labels:
+            severity: ticket
+          annotations:
+            summary: "Disjoncteur ouvert sur {{ $labels.method }}"
+        - alert: GatewayDownstreamPoolSaturation
+          expr: |
+            max by (clientName) (http_client_pending_requests{job="souscription-gateway", clientName=~"catalogue|simulation"}) > 40
+            or
+            max by (clientName) (http_client_pending_requests{job="souscription-gateway", clientName="subscription"}) > 24
+          for: 5m
+          labels:
+            severity: ticket
+          annotations:
+            summary: "Pool de connexions aval sature a plus de 80 % sur {{ $labels.clientName }}"
+        - alert: GatewayEdgeRejectionSpike
+          expr: sum by (reason, status) (rate(gateway_rejections_total{job="souscription-gateway"}[5m])) > 1
+          for: 10m
+          labels:
+            severity: ticket
+          annotations:
+            summary: "Rejets d'arete inhabituels ({{ $labels.status }} / {{ $labels.reason }})"
+        - alert: GatewayLatencyP99High
+          expr: |
+            histogram_quantile(0.99,
+              sum by (le, uri) (rate(http_server_requests_seconds_bucket{job="souscription-gateway", uri!="/unmatched"}[5m]))
+            ) > 3
+          for: 10m
+          labels:
+            severity: ticket
+          annotations:
+            summary: "p99 superieur a 3 s sur {{ $labels.uri }}"
+
+    - name: souscription-gateway-mtls
+      rules:
+        - alert: GatewayMtlsCertificateExpiringSoon
+          expr: min by (client, store) (gateway_tls_certificate_expiry_seconds{job="souscription-gateway"}) - time() < 30 * 86400
+          for: 1h
+          labels:
+            severity: ticket
+          annotations:
+            summary: "Certificat mTLS ({{ $labels.client }} / {{ $labels.store }}) expire dans moins de 30 jours"
+        - alert: GatewayMtlsCertificateExpiryCritical
+          expr: min by (client, store) (gateway_tls_certificate_expiry_seconds{job="souscription-gateway"}) - time() < 7 * 86400
+          for: 10m
+          labels:
+            severity: page
+          annotations:
+            summary: "Certificat mTLS ({{ $labels.client }} / {{ $labels.store }}) expire dans moins de 7 jours"
+        - alert: GatewayMtlsCertificateExpiryMissing
+          expr: absent(gateway_tls_certificate_expiry_seconds{job="souscription-gateway"})
+          for: 30m
+          labels:
+            severity: ticket
+          annotations:
+            summary: "Jauge d'expiration mTLS absente : le materiel /etc/gateway/tls n'est pas lisible"

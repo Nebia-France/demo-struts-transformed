@@ -1,0 +1,35 @@
+@if (parcoursNotice()) {
+  <div class="message notice" role="status">{{ labels.parcoursNotice }}</div>
+}
+<p class="intro">{{ labels.intro }}</p>
+<section class="panel">
+  <h2>{{ labels.listHeading }}</h2>
+  <div class="panel-body">
+    <p>{{ labels.listLead }}</p>
+    <div class="table-scroll">
+      <table class="data-table catalogue">
+        <caption class="sr-only">{{ labels.tableCaption }}</caption>
+        <thead><tr><th scope="col">{{ labels.columnProduct }}</th><th scope="col">{{ labels.columnProfile }}</th><th scope="col">{{ labels.columnRate }}<br>{{ labels.columnRateSecondLine }}</th><th scope="col">{{ labels.columnFrom }}</th><th scope="col">{{ labels.columnInformation }}</th></tr></thead>
+        <tbody>
+          @for (item of products(); track item.code) {
+            <tr>
+              <th scope="row"><a [routerLink]="['/produit', item.code]">{{ item.name }}</a></th>
+              <td>{{ item.profile }}</td>
+              <td class="numeric rate">{{ item.ratePercent | number : '1.0-0' : 'fr-FR' }} {{ labels.percentSuffix }}</td>
+              <td class="numeric">{{ labels.minimumInitial }}</td>
+              <td><a [routerLink]="['/produit', item.code]">{{ labels.consult }}<span class="sr-only"> {{ item.name }}</span> {{ labels.consultChevron }}</a></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="fine-print">{{ labels.listFinePrint }}</p>
+  </div>
+</section>
+<section class="panel">
+  <h2>{{ labels.howToHeading }}</h2>
+  <div class="panel-body">
+    <ol class="instructions"><li>{{ labels.howToStep1 }}</li><li>{{ labels.howToStep2 }}</li><li>{{ labels.howToStep3 }}</li></ol>
+  </div>
+</section>
+<div class="message notice"><strong>{{ labels.noticeTitle }}</strong><br>{{ labels.noticeBody }}</div>

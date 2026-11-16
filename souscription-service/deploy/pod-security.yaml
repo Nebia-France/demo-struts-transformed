@@ -1,0 +1,34 @@
+#
+# Contrat de durcissement runtime de souscription-service (W0-T05).
+# Consomme par la plateforme : ces valeurs sont appliquees au Pod/Deployment
+# qui execute l'image horizon/souscription-service.
+# L'image tourne en non-root (UID 185, utilisateur par defaut de
+# ubi9/openjdk-21-runtime) avec un systeme de fichiers racine en lecture seule ;
+# le seul chemin inscriptible est /tmp, fourni par un emptyDir.
+#
+apiVersion: v1
+kind: PodSecurityContract
+metadata:
+  name: souscription-service-pod-security
+spec:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 185
+    fsGroup: 185
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 185
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    privileged: false
+    capabilities:
+      drop:
+        - "ALL"
+  volumes:
+    - name: tmp
+      emptyDir: {}
+  volumeMounts:
+    - name: tmp
+      mountPath: /tmp

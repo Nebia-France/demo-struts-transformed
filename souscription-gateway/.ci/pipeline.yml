@@ -1,0 +1,158 @@
+####
+# Pipeline CI du module souscription-gateway (W0-T10).
+# Portee : uniquement le module souscription-gateway. Les quatre autres applications
+# de la topologie cible possedent leur propre pipeline (voir docs/operational-cost.md, NFG-022).
+####
+stages:
+  - gherkin-allocation
+  - build
+  - test
+  - contract
+  - chaos
+  - load
+  - event-loop-gate
+  - dependency-scan
+  - image-build
+  - image-scan
+  - push
+
+variables:
+  MODULE: souscription-gateway
+  IMAGE: souscription-gateway
+
+gherkin-allocation:
+  stage: gherkin-allocation
+  # Matrice d'allocation des 88 scenarios Gherkin (W7-T01) - voir features/SCENARIO_OWNERSHIP.md.
+  # Echoue si le total differe de 88, si un scenario est orphelin ou alloue deux fois, si une entree
+  # est perimee, si souscription-gateway ne possede pas exactement 24 scenarios ou si une balise
+  # proprietaire contredit features/SCENARIO_OWNERSHIP.json.
+  script:
+    - python3 -m json.tool features/SCENARIO_OWNERSHIP.json > /dev/null
+    - bash souscription-gateway/src/test/scripts/check-scenario-ownership.sh
+
+build:
+  stage: build
+  script:
+    - mvn -f souscription-gateway/pom.xml clean package
+  artifacts:
+    paths:
+      - souscription-gateway/target/quarkus-app/
+
+test:
+  stage: test
+  script:
+    - mvn -f souscription-gateway/pom.xml verify
+  # Le document OpenAPI genere (quarkus.smallrye-openapi.store-schema-directory=target) est
+  # archive comme artefact versionne du build : contrat fournisseur consomme par souscription-web.
+  artifacts:
+    paths:
+      - souscription-gateway/target/openapi.yaml
+
+gherkin-gateway:
+  stage: test
+  # Execute les 24 scenarios possedes par souscription-gateway (balise @souscription-gateway,
+  # derivee de features/SCENARIO_OWNERSHIP.json) ; les scenarios des applications soeurs et de la
+  # suite end-to-end ne sont pas joues ici.
+  # Porte obligatoire depuis le plan 31 (W7-T02) : jamais allow_failure. Elle verifie aussi qu'aucun
+  # code org.jsoup ne subsiste dans le module (les assertions HTML ont un successeur JSON, voir
+  # souscription-gateway/docs/assertion-successors.md).
+  allow_failure: false
+  script:
+    - '! grep -rn "org.jsoup" souscription-gateway/src'
+    - mvn -f souscription-gateway/pom.xml verify -Pcucumber
+
+network-isolation:
+  stage: test
+  # Audit de bordure (W7-T04, docs/security-audit.md controle 6) : invariants declaratifs de
+  # deploy/networkpolicy.yaml, aucun aval publie par deploy/, l'ingress local ou le compose.
+  # Les sondes en cluster de docs/network-isolation.md restent a l'equipe infrastructure.
+  allow_failure: false
+  script:
+    - bash souscription-gateway/src/test/scripts/network-isolation-check.sh
+
+contract:
+  stage: contract
+  # Validation des contrats inter-applications (W7-T03) - voir docs/contract-validation.md.
+  # Contrat fourni souscription-web-to-souscription-gateway : ProvidedContractTest compare le
+  # document genere (target/openapi.yaml, /q/openapi) et les reponses reelles au contrat de
+  # reference. Contrats consommes (catalogue, simulation, souscription) : ConsumedContractTest
+  # verifie interfaces clientes, types de charge utile et octets des bouchons WireMock regeneres ;
+  # ContractErrorMappingTest verrouille les correspondances 404/422/502/503/504.
+  # contract-breaking-check.sh applique une rupture (membre requis renomme) a une copie d'un
+  # contrat aval et echoue si la construction de la passerelle ne casse PAS : une rupture aval
+  # fait echouer ce pipeline, pas la production. Jamais allow_failure.
+  allow_failure: false
+  script:
+    - bash souscription-gateway/src/test/scripts/generate-stubs.sh --check
+    - mvn -f souscription-gateway/pom.xml test -Dtest=ProvidedContractTest,ConsumedContractTest,ContractErrorMappingTest
+    - bash souscription-gateway/src/test/scripts/contract-breaking-check.sh
+  artifacts:
+    when: always
+    paths:
+      - souscription-gateway/target/openapi.yaml
+      - souscription-gateway/target/surefire-reports/
+
+chaos:
+  stage: chaos
+  # Validation des chemins degrades (W5-T04) - voir docs/resilience-policies.md.
+  # ChaosIT injecte, par aval, les quatre modes de panne (latence > delai -> 504, 5xx -> 502,
+  # connexion refusee -> 503, certificat serveur invalide -> 503 sans repli en clair), le cycle
+  # ouverture/fermeture du disjoncteur et la propriete d'isolation (un aval lent ne consomme pas la
+  # capacite des deux autres).
+  script:
+    - mvn -f souscription-gateway/pom.xml failsafe:integration-test failsafe:verify -Dit.test=ChaosIT
+
+load:
+  stage: load
+  # Charge de reference (W5-T04 / NFG-009) : plafond de capacite, p95 par endpoint, surcout par
+  # saut, puis absence d'affinite de session sur 2 repliques (NFG-012). Les mesures sont consignees
+  # dans docs/capacity.md. Le journal produit ici alimente la porte event-loop-gate ci-dessous.
+  script:
+    - bash souscription-gateway/src/test/scripts/load-test.sh
+    - bash souscription-gateway/src/test/scripts/no-affinity-check.sh
+  artifacts:
+    paths:
+      - souscription-gateway/target/load/
+      - souscription-gateway/target/application.log
+
+event-loop-gate:
+  stage: event-loop-gate
+  # Modele d'execution non bloquant (W5-T02, NFG-009) - voir docs/execution-model.md.
+  # Le journal de l'application produit par l'etape de charge (plan 24) ne doit contenir aucun
+  # avertissement de blocage de la boucle d'evenements ; seuil de detection 2000 ms
+  # (quarkus.vertx.warning-exception-time=2S).
+  script:
+    - '! grep -q "has been blocked" souscription-gateway/target/application.log'
+
+dependency-scan:
+  stage: dependency-scan
+  # Echec du pipeline sur toute vulnerabilite HIGH/CRITICAL de l'arbre de dependances resolu.
+  # La mise a jour NVD exige la variable masquee NVD_API_KEY (secret CI, jamais versionne) ; les
+  # seules exceptions admises sont celles, datees, de dependency-check-suppressions.xml
+  # (docs/cve-review.md) : une exception echue refait echouer cette porte. Jamais allow_failure.
+  allow_failure: false
+  script:
+    - mvn -f souscription-gateway/pom.xml dependency:tree -DoutputFile=target/dependency-tree.txt
+    - mvn -f souscription-gateway/pom.xml org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+  artifacts:
+    when: always
+    paths:
+      - souscription-gateway/target/dependency-tree.txt
+      - souscription-gateway/target/dependency-check-report.html
+      - souscription-gateway/target/dependency-check-report.json
+
+image-build:
+  stage: image-build
+  script:
+    - docker build -f souscription-gateway/src/main/docker/Dockerfile.jvm -t souscription-gateway:$CI_COMMIT_SHA souscription-gateway
+
+image-scan:
+  stage: image-scan
+  # Echec sur toute vulnerabilite HIGH/CRITICAL, OS ou applicative, presente dans l'image.
+  script:
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed souscription-gateway:$CI_COMMIT_SHA
+
+push:
+  stage: push
+  script:
+    - docker push souscription-gateway:$CI_COMMIT_SHA

@@ -1,0 +1,84 @@
+#
+# Contrat de deploiement de souscription-service (W5-T02 / W5-T05).
+# Complete deploy/pod-security.yaml, qui porte le durcissement runtime : ce document declare le
+# cycle de vie du Pod, c'est-a-dire les trois sondes de sante et le drainage des requetes en vol.
+# Les sondes sont servies par l'extension quarkus-smallrye-health
+# (quarkus.smallrye-health.root-path=/q/health), le drainage par quarkus.shutdown.timeout=30S.
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: souscription-service
+  labels:
+    app.kubernetes.io/name: souscription-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: souscription-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Aucune requete perdue pendant un redemarrage progressif (NFG-012) : un pod neuf doit etre
+      # pret avant qu'un ancien ne soit retire.
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: souscription-service
+    spec:
+      # Identite SPIFFE sortante du service (W6-T03) :
+      # spiffe://horizon-souscription/ns/horizon/sa/souscription-service.
+      # Le compte est declare par deploy/authorization-policy.yaml ; sans cette reference le pod
+      # emprunterait le compte "default" du namespace et presenterait une identite refusee par
+      # les politiques d'autorisation du catalogue et de la simulation.
+      serviceAccountName: souscription-service
+      # Doit rester >= quarkus.shutdown.timeout, sinon le drainage est interrompu par SIGKILL.
+      terminationGracePeriodSeconds: 45
+      containers:
+        - name: souscription-service
+          image: horizon/souscription-service:1.0.0
+          ports:
+            - name: http
+              containerPort: 8080
+          # Limite memoire du conteneur (NFG-010) : -XX:MaxRAMPercentage=75 de l'image dimensionne
+          # le tas sur cette limite cgroup ; sans elle, il le serait sur la memoire du noeud. Valeur
+          # identique a la limite emulee par le banc (deploy/BENCHMARK_REPORT.md, -XX:MaxRAM=512m).
+          resources:
+            requests:
+              memory: 512Mi
+            limits:
+              memory: 512Mi
+          lifecycle:
+            preStop:
+              # Laisse le temps au retrait des Endpoints de se propager avant que le processus ne
+              # commence son arret : sans cette pause, des requetes sont encore routees vers un pod
+              # deja en extinction.
+              exec:
+                command: ["sleep", "5"]
+          # Le pod n'est pas declare demarre tant que le conteneur Quarkus et Flyway n'ont pas
+          # abouti : jusque-la, ni la liveness ni la readiness ne sont evaluees.
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          # Readiness = datasource (DatabaseReadinessCheck) + dependances catalogue et simulation
+          # (DependencyReadinessCheck, renseigne au plan 30). Une base injoignable retire le pod du
+          # Service sans le redemarrer.
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3

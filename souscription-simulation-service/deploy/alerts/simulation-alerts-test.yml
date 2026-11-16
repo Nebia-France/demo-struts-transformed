@@ -1,0 +1,111 @@
+# Tests unitaires promtool des règles de deploy/alerts/simulation-alerts.yml (W5-T02).
+# Exécuté par l'étape alert-rules-test du pipeline : `promtool test rules`.
+rule_files:
+  - simulation-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Dégradation : 5 % de 503, latences au-delà des objectifs.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",outcome="SUCCESS"}'
+        values: '0+100x20'
+      - series: 'http_server_requests_seconds_count{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="503",outcome="SERVER_ERROR"}'
+        values: '0+5x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: SimulationAvailabilityBelowSlo
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: souscription-simulation-service
+            exp_annotations:
+              summary: "Disponibilité sous le SLO de 99,9 % sur 5 min"
+              description: "Le ratio de réponses non 5xx est passé sous 0.999 sur la fenêtre de 5 minutes."
+      - eval_time: 15m
+        alertname: SimulationServiceUnavailableRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: souscription-simulation-service
+            exp_annotations:
+              summary: "Taux de 503 > 1 %"
+              description: "Plus de 1 % des réponses sont des 503 (bulkhead saturé ou timeout serveur)."
+
+  # Latences : p95 et p99 au-dessus des objectifs de 50 ms et 120 ms.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_bucket{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",le="0.01"}'
+        values: '0+10x20'
+      - series: 'http_server_requests_seconds_bucket{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",le="0.05"}'
+        values: '0+80x20'
+      - series: 'http_server_requests_seconds_bucket{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",le="0.1"}'
+        values: '0+90x20'
+      - series: 'http_server_requests_seconds_bucket{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",le="0.5"}'
+        values: '0+100x20'
+      - series: 'http_server_requests_seconds_bucket{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",le="+Inf"}'
+        values: '0+100x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: SimulationLatencyP95High
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: souscription-simulation-service
+            exp_annotations:
+              summary: "p95 HTTP > 50 ms"
+              description: "Le p95 de http_server_requests dépasse l'objectif de 50 ms. Comparer avec simulation_calculate_seconds pour attribuer la régression au calcul ou au transport."
+      - eval_time: 15m
+        alertname: SimulationLatencyP99High
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: souscription-simulation-service
+            exp_annotations:
+              summary: "p99 HTTP > 120 ms"
+              description: "Le p99 de http_server_requests dépasse l'objectif de 120 ms."
+
+  # File du worker pool à la capacité configurée (SIM_QUEUE_SIZE = 64).
+  - interval: 1m
+    input_series:
+      - series: 'worker_pool_queue_size{service="souscription-simulation-service",pool_name="vert.x-worker-thread"}'
+        values: '64 64 64 64 64 64'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: SimulationWorkerPoolQueueSaturated
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: souscription-simulation-service
+            exp_annotations:
+              summary: "File d'attente du worker pool saturée"
+              description: "worker_pool_queue_size atteint la capacité configurée (SIM_QUEUE_SIZE, défaut 64) : les requêtes suivantes sont rejetées en 503."
+
+  # Service sain : aucune alerte ne doit se déclencher.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",outcome="SUCCESS"}'
+        values: '0+100x20'
+      - series: 'http_server_requests_seconds_bucket{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",le="0.01"}'
+        values: '0+100x20'
+      - series: 'http_server_requests_seconds_bucket{service="souscription-simulation-service",uri="/v1/simulations",method="POST",status="200",le="+Inf"}'
+        values: '0+100x20'
+      - series: 'worker_pool_queue_size{service="souscription-simulation-service",pool_name="vert.x-worker-thread"}'
+        values: '0+0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: SimulationAvailabilityBelowSlo
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: SimulationServiceUnavailableRateHigh
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: SimulationLatencyP95High
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: SimulationLatencyP99High
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: SimulationWorkerPoolQueueSaturated
+        exp_alerts: []

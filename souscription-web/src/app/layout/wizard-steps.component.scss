@@ -1,0 +1,50 @@
+@use '../../styles/tokens' as t;
+
+// `.sidebar h2` and `.steps` from `application.css`. `.sidebar` belongs to the parent
+// layout template, so the heading rule is rewritten as a component-local `h2` selector
+// instead of re-creating the cross-component descendant selector.
+
+h2 {
+  margin: 0;
+  padding: 7px 5px;
+  color: t.$c-brand-dark;
+  font-size: 0.8rem;
+  border-bottom: 2px solid #8299b2;
+}
+
+.steps {
+  list-style-position: inside;
+  margin: 10px 0 25px;
+  padding: 0;
+  font-size: 0.88rem;
+
+  li {
+    padding: 8px 6px;
+    border-bottom: 1px solid #d0d8e1;
+    color: #536171;
+
+    &.current {
+      background: #d9e3ef;
+      color: t.$c-brand-dark;
+      font-weight: bold;
+    }
+  }
+}
+
+@media (max-width: 520px) {
+  h2 {
+    display: none;
+  }
+
+  .steps {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    gap: 3px;
+
+    li {
+      padding: 4px;
+      font-size: 0.8rem;
+    }
+  }
+}

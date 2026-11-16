@@ -1,0 +1,137 @@
+@use 'tokens' as t;
+
+// Form and control rules ported from `application.css` (`.form-row`, text inputs,
+// checkboxes, `.required`, `.required-legend`, `.field-error`, `.acceptance`, `.actions`,
+// `.inline-actions`, buttons). Imported by every component that renders a form or an
+// action bar; Angular scopes the element selectors to that component's template.
+
+.form-row {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e1e5ea;
+  align-items: start;
+
+  label {
+    padding-top: 4px;
+  }
+}
+
+input[type='text'] {
+  padding: 4px 5px;
+  max-width: 100%;
+  background: #fff;
+  color: t.$c-text;
+  border: 1px solid #8794a2;
+  border-top-color: #657280;
+  border-left-color: #657280;
+  font: inherit;
+  border-radius: 0;
+}
+
+input[type='checkbox'] {
+  accent-color: t.$c-brand-dark;
+}
+
+input[aria-invalid='true'] {
+  border-color: #a23c34;
+  background: #fffaf9;
+}
+
+.required {
+  color: #922c27;
+}
+
+.required-legend {
+  font-size: 0.82rem;
+  color: #505d6b;
+}
+
+.field-error {
+  color: #8b2722;
+  font-size: 0.82rem;
+  margin: 4px 0 0;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #b6c1cd;
+  background: #f0f2f5;
+  padding: 10px 12px;
+  margin-top: 16px;
+
+  a:not(.button) {
+    font-size: 0.88rem;
+  }
+}
+
+.inline-actions {
+  padding: 12px 0 2px;
+  text-align: right;
+}
+
+button,
+.button {
+  display: inline-block;
+  padding: 5px 12px;
+  background: linear-gradient(#fff, #d7dce2);
+  color: #1d344e;
+  border: 2px outset #c5cbd2;
+  border-radius: 0;
+  font: bold 0.88rem Verdana, Arial, sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 1.5;
+
+  &:hover {
+    background: #e7edf4;
+    color: t.$c-brand-dark;
+  }
+
+  &:active {
+    border-style: inset;
+    background: #d5dce5;
+  }
+}
+
+.button:visited {
+  color: #1d344e;
+}
+
+.acceptance {
+  padding: 10px;
+  border: 1px solid #b4bfcc;
+  background: #f8f9fb;
+  font-size: 0.88rem;
+
+  input {
+    vertical-align: top;
+    margin-top: 4px;
+  }
+
+  label {
+    display: inline-block;
+    width: calc(100% - 28px);
+  }
+}
+
+@media (max-width: 760px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
+@media (max-width: 520px) {
+  .actions {
+    flex-wrap: wrap;
+  }
+}

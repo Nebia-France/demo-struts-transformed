@@ -1,0 +1,177 @@
+{
+  "mappings": [
+    {
+      "name": "listProducts - GET /v1/products -> 200 (contract: souscription-gateway-to-souscription-catalogue-service)",
+      "request": {
+        "method": "GET",
+        "urlPath": "/v1/products"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": [
+          {
+            "code": "PRUDENT",
+            "name": "Horizon Prudent",
+            "profile": "Prudent",
+            "annualRate": "0.020000"
+          },
+          {
+            "code": "EQUILIBRE",
+            "name": "Horizon Équilibre",
+            "profile": "Équilibré",
+            "annualRate": "0.040000"
+          },
+          {
+            "code": "DYNAMIQUE",
+            "name": "Horizon Dynamique",
+            "profile": "Dynamique",
+            "annualRate": "0.060000"
+          }
+        ]
+      },
+      "metadata": {
+        "generatedBy": "src/test/scripts/generate-stubs.sh",
+        "contract": "souscription-gateway-to-souscription-catalogue-service",
+        "operationIds": [
+          "listProducts"
+        ]
+      }
+    },
+    {
+      "name": "getProduct - GET /v1/products/{code} -> 200 (contract: souscription-gateway-to-souscription-catalogue-service)",
+      "request": {
+        "method": "GET",
+        "urlPath": "/v1/products/PRUDENT"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "code": "PRUDENT",
+          "name": "Horizon Prudent",
+          "profile": "Prudent",
+          "description": "Une hypothèse de progression modérée pour découvrir le fonctionnement de l'épargne.",
+          "annualRate": "0.020000"
+        }
+      },
+      "metadata": {
+        "generatedBy": "src/test/scripts/generate-stubs.sh",
+        "contract": "souscription-gateway-to-souscription-catalogue-service",
+        "operationIds": [
+          "getProduct"
+        ]
+      }
+    },
+    {
+      "name": "getProduct - GET /v1/products/{code} -> 200 (contract: souscription-gateway-to-souscription-catalogue-service)",
+      "request": {
+        "method": "GET",
+        "urlPath": "/v1/products/EQUILIBRE"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "code": "EQUILIBRE",
+          "name": "Horizon Équilibre",
+          "profile": "Équilibré",
+          "description": "Une hypothèse intermédiaire pour construire un projet dans la durée.",
+          "annualRate": "0.040000"
+        }
+      },
+      "metadata": {
+        "generatedBy": "src/test/scripts/generate-stubs.sh",
+        "contract": "souscription-gateway-to-souscription-catalogue-service",
+        "operationIds": [
+          "getProduct"
+        ]
+      }
+    },
+    {
+      "name": "getProduct - GET /v1/products/{code} -> 200 (contract: souscription-gateway-to-souscription-catalogue-service)",
+      "request": {
+        "method": "GET",
+        "urlPath": "/v1/products/DYNAMIQUE"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "code": "DYNAMIQUE",
+          "name": "Horizon Dynamique",
+          "profile": "Dynamique",
+          "description": "Une hypothèse de progression plus élevée, associée à un profil de risque supérieur.",
+          "annualRate": "0.060000"
+        }
+      },
+      "metadata": {
+        "generatedBy": "src/test/scripts/generate-stubs.sh",
+        "contract": "souscription-gateway-to-souscription-catalogue-service",
+        "operationIds": [
+          "getProduct"
+        ]
+      }
+    },
+    {
+      "name": "getProduct - GET /v1/products/{code} -> 500 - InternalError fixture, triggered by the reserved code @@forced-error@@ (contract: souscription-gateway-to-souscription-catalogue-service)",
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/v1/products/.*forced-error.*"
+      },
+      "response": {
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/problem+json"
+        },
+        "jsonBody": {
+          "type": "about:blank",
+          "title": "Internal Server Error",
+          "status": 500
+        }
+      },
+      "metadata": {
+        "generatedBy": "src/test/scripts/generate-stubs.sh",
+        "contract": "souscription-gateway-to-souscription-catalogue-service",
+        "operationIds": [
+          "getProduct"
+        ]
+      }
+    },
+    {
+      "name": "getProduct - GET /v1/products/{code} -> 404 - NotFound for any unknown code (contract: souscription-gateway-to-souscription-catalogue-service)",
+      "priority": 10,
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/v1/products/.+"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/problem+json"
+        },
+        "jsonBody": {
+          "type": "about:blank",
+          "title": "Not Found",
+          "status": 404
+        }
+      },
+      "metadata": {
+        "generatedBy": "src/test/scripts/generate-stubs.sh",
+        "contract": "souscription-gateway-to-souscription-catalogue-service",
+        "operationIds": [
+          "getProduct"
+        ]
+      }
+    }
+  ]
+}

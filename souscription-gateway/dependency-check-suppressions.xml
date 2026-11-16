@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Exceptions OWASP dependency-check de souscription-gateway (W7-T04).
+  Chaque entree est justifiee, datee et porte une echeance de revue : voir docs/cve-review.md.
+  Une entree expiree (attribut until) cesse d'etre appliquee et refait echouer le pipeline.
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <suppress until="2027-02-15Z">
+    <notes><![CDATA[
+      Faux positif. CVE-2026-0994 vise google.protobuf.json_format.ParseDict() de l'implementation
+      Python de protobuf ; protobuf-java n'expose pas ce code. Rattache par la CPE generique
+      cpe:2.3:a:google:protobuf (aucun identifiant pkg:maven dans l'avis OSV). Dependance transitive
+      (quarkus-opentelemetry -> quarkus-grpc-common -> grpc-protobuf), aucun appel gRPC expose par la
+      passerelle. Echeance de revue : 2027-02-15.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf-java@.*$</packageUrl>
+    <cve>CVE-2026-0994</cve>
+  </suppress>
+  <suppress until="2027-02-15Z">
+    <notes><![CDATA[
+      Exception documentee (docs/cve-review.md, EXC-02). CVE-2026-40984 / GHSA-g3pr-3p32-fp23,
+      DoS des instrumentations serveur HTTP de micrometer-core. La ligne 1.14 open source s'arrete a
+      1.14.14 (affectee) : aucune montee de correctif n'existe, le correctif est en 1.15.12 (ligne
+      mineure suivante, non supportee par quarkus-micrometer 3.20). Signale par OSV, pas encore par
+      le cache NVD local. Attenuation : motifs d'URI ordonnes avec repli /unmatched, limites de
+      taille d'en-tete et de corps, /q/metrics sur le port de management uniquement.
+      Echeance : 2027-02-15 (montee vers la plateforme Quarkus LTS embarquant micrometer >= 1.15.12).
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.micrometer/micrometer-core@.*$</packageUrl>
+    <cve>CVE-2026-40984</cve>
+  </suppress>
+</suppressions>

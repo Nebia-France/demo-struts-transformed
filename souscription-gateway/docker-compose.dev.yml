@@ -1,0 +1,104 @@
+# W6-T05 - flow (b): the full local topology with one command.
+#
+#   make -C souscription-gateway dev-topology          # contract stubs for the 3 services (default)
+#   make -C souscription-gateway dev-topology PROFILE=siblings   # the sibling service images
+#
+# which packages the gateway, builds its image (src/main/docker/Dockerfile.jvm, plan 04) and runs
+#   docker compose -f souscription-gateway/docker-compose.dev.yml --profile <stubs|siblings> up -d --build
+#
+# Topology: ingress (same origin, :8088) -> souscription-web (SPA) and souscription-gateway (/api/);
+# gateway -> souscription-catalogue-service, souscription-simulation-service, souscription-service.
+# With --profile stubs, the three services are WireMock containers serving the mappings generated
+# from global/contracts/ (src/test/resources/wiremock/, see src/test/scripts/generate-stubs.sh),
+# under the service host names. With --profile siblings they are the sibling images; their own
+# configuration (database, local profile) is owned by their repositories.
+#
+# Local only: plain HTTP inside the compose network. The gateway runs the non-prod "local" profile
+# because the %prod outbound mTLS material is a cluster secret (docs/mtls.md). Every host port is
+# bound to 127.0.0.1. CSRF_SIGNING_KEY is mandatory and never committed: the Makefile generates one
+# per run.
+
+name: souscription-dev
+
+services:
+  ingress:
+    image: nginxinc/nginx-unprivileged:stable-alpine
+    ports:
+      - "127.0.0.1:${INGRESS_PORT:-8088}:8080"
+    volumes:
+      - ./deploy/local/ingress.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      souscription-gateway:
+        condition: service_healthy
+
+  souscription-web:
+    image: ${SOUSCRIPTION_WEB_IMAGE:-souscription-web:local}
+
+  souscription-gateway:
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    image: ${SOUSCRIPTION_GATEWAY_IMAGE:-souscription-gateway:local}
+    environment:
+      QUARKUS_PROFILE: local
+      CSRF_SIGNING_KEY: ${CSRF_SIGNING_KEY:?CSRF_SIGNING_KEY must be set (make dev-topology generates one)}
+      CATALOGUE_BASE_URI: http://souscription-catalogue-service:8080
+      SIMULATION_BASE_URI: http://souscription-simulation-service:8080
+      SUBSCRIPTION_BASE_URI: http://souscription-service:8080
+      OTEL_COLLECTOR_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://127.0.0.1:4317}
+      QUARKUS_OTEL_SDK_DISABLED: ${QUARKUS_OTEL_SDK_DISABLED:-true}
+    ports:
+      # Operational endpoints: /q/health/live, /q/health/ready, /q/metrics, /q/openapi.
+      - "127.0.0.1:${MANAGEMENT_PORT:-9000}:9000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:9000/q/health/ready"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  # ------------------------------------------------------------- contract stubs (--profile stubs)
+  catalogue-stub:
+    profiles: [stubs]
+    image: wiremock/wiremock:3.13.2
+    command: ["--disable-banner"]
+    volumes:
+      - ./src/test/resources/wiremock/catalogue/mappings:/home/wiremock/mappings:ro
+    networks:
+      default:
+        aliases: [souscription-catalogue-service]
+
+  simulation-stub:
+    profiles: [stubs]
+    image: wiremock/wiremock:3.13.2
+    command: ["--disable-banner"]
+    volumes:
+      - ./src/test/resources/wiremock/simulation/mappings:/home/wiremock/mappings:ro
+    networks:
+      default:
+        aliases: [souscription-simulation-service]
+
+  subscription-stub:
+    profiles: [stubs]
+    image: wiremock/wiremock:3.13.2
+    command: ["--disable-banner"]
+    volumes:
+      - ./src/test/resources/wiremock/subscription/mappings:/home/wiremock/mappings:ro
+    networks:
+      default:
+        aliases: [souscription-service]
+
+  # --------------------------------------------------------- sibling services (--profile siblings)
+  souscription-catalogue-service:
+    profiles: [siblings]
+    image: ${CATALOGUE_IMAGE:-horizon/souscription-catalogue-service:1.0.0-SNAPSHOT}
+
+  souscription-simulation-service:
+    profiles: [siblings]
+    image: ${SIMULATION_IMAGE:-horizon/souscription-simulation-service:1.0.0-SNAPSHOT}
+
+  souscription-service:
+    profiles: [siblings]
+    image: ${SUBSCRIPTION_IMAGE:-horizon/souscription-service:1.0.0-SNAPSHOT}
+    env_file:
+      - path: ${SUBSCRIPTION_ENV_FILE:-./deploy/local/souscription-service.env}
+        required: false

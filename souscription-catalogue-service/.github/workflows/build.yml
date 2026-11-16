@@ -1,0 +1,138 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Compile
+        run: mvn -f souscription-catalogue-service/pom.xml clean compile
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Unit tests and Cucumber suite (promoted gate, W7-T02)
+        run: mvn -f souscription-catalogue-service/pom.xml clean verify -Pcucumber
+
+  contract:
+    # W7-T37: the two provided contracts and the frozen /v1 document. A removed path,
+    # operation or required property fails this job, so a backward-incompatible change
+    # cannot reach the consumers (souscription-gateway, souscription-service).
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Inter-application contract validation
+        run: >-
+          mvn -f souscription-catalogue-service/pom.xml clean verify -Pcucumber
+          -Dtest=InterApplicationContractTest,OpenApiContractTest
+
+  cve:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Dependency vulnerability scan
+        run: mvn -f souscription-catalogue-service/pom.xml -Psecurity verify -DskipTests
+
+  image:
+    needs: cve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build container image
+        run: mvn -f souscription-catalogue-service/pom.xml package -Dquarkus.container-image.build=true
+
+  network-isolation:
+    # W6-T02: the catalogue must stay unreachable from outside the cluster. Manifests are
+    # checked for any public exposure object, then a negative reachability test is run from
+    # outside the cluster and must FAIL to connect.
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No public exposure object in the manifests
+        run: |
+          if grep -rniE "LoadBalancer|NodePort|kind: Ingress" souscription-catalogue-service/deploy/; then
+            echo "::error::public exposure object found in deploy/ (NFG-007, CFG-006, IG-003)"
+            exit 1
+          fi
+      - name: NetworkPolicy whitelists exactly the two authorised callers
+        run: |
+          count=$(grep -c "podSelector: { matchLabels: { app: souscription-" \
+            souscription-catalogue-service/deploy/networkpolicy.yaml)
+          test "$count" -eq 3 || { echo "::error::expected 3 app selectors, found $count"; exit 1; }
+          for caller in souscription-gateway souscription-service; do
+            grep -q "app: $caller }" souscription-catalogue-service/deploy/networkpolicy.yaml \
+              || { echo "::error::authorised caller $caller missing from the NetworkPolicy"; exit 1; }
+          done
+      - name: External reachability must fail
+        # CATALOGUE_EXTERNAL_HOST points at the cluster edge (ingress/LB address or node IP).
+        # Connecting to 8443 or 9000 from outside must be refused or time out; a success means
+        # the isolation is broken and the deployment must be blocked.
+        env:
+          CATALOGUE_EXTERNAL_HOST: ${{ vars.CATALOGUE_EXTERNAL_HOST }}
+        run: |
+          if [ -z "$CATALOGUE_EXTERNAL_HOST" ]; then
+            echo "CATALOGUE_EXTERNAL_HOST not configured - skipping live probe"
+            exit 0
+          fi
+          for port in 8443 9000; do
+            if curl -k -sS --connect-timeout 5 --max-time 10 \
+                 "https://$CATALOGUE_EXTERNAL_HOST:$port/v1/products" >/dev/null 2>&1; then
+              echo "::error::$CATALOGUE_EXTERNAL_HOST:$port is reachable from outside the cluster"
+              exit 1
+            fi
+            echo "port $port unreachable from outside, as expected"
+          done
+
+  push:
+    needs: [image, network-isolation, contract]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Push container image
+        run: >-
+          mvn -f souscription-catalogue-service/pom.xml package
+          -Dquarkus.container-image.build=true
+          -Dquarkus.container-image.push=true
+          -Dquarkus.container-image.registry=${{ vars.CONTAINER_REGISTRY }}
+          -Dquarkus.container-image.username=${{ secrets.CONTAINER_REGISTRY_USERNAME }}
+          -Dquarkus.container-image.password=${{ secrets.CONTAINER_REGISTRY_PASSWORD }}

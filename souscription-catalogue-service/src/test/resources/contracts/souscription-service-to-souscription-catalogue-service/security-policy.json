@@ -1,0 +1,58 @@
+{
+  "communicationId": "souscription-service-to-souscription-catalogue-service",
+  "from": "souscription-service",
+  "to": "souscription-catalogue-service",
+  "authentication": {
+    "mechanism": "mTLS",
+    "details": {
+      "tlsClientCertificate": "X.509 workload certificate issued by the cluster PKI, rotated automatically",
+      "acceptedSubjects": [
+        "spiffe://horizon-souscription/ns/horizon/sa/souscription-service"
+      ],
+      "rejectAllOtherIdentities": true,
+      "note": "No end-user authentication exists anywhere in the system (none exists in the source and none is introduced). mTLS authenticates the calling workload only.",
+      "tokenPropagation": "none (no user token exists); X-Correlation-Id and W3C traceparent are propagated instead"
+    }
+  },
+  "authorization": {
+    "model": "none",
+    "rationale": "OD-007 confirmed: the calling workload identity is the only authorization signal; no user roles or scopes exist in this system.",
+    "operationPermissions": [
+      {
+        "operation": "getProduct",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "allowedCallerIdentities": [
+          "spiffe://horizon-souscription/ns/horizon/sa/souscription-service"
+        ]
+      }
+    ]
+  },
+  "rateLimiting": {
+    "requestsPerSecond": 100,
+    "burstSize": 200,
+    "scope": "per calling workload identity",
+    "onExceeded": "429 with problem+json; the caller must not retry a 429"
+  },
+  "tls": {
+    "minimumVersion": "1.3",
+    "preferredVersion": "1.3",
+    "required": true,
+    "mutual": true,
+    "cipherSuites": [
+      "TLS_AES_256_GCM_SHA384",
+      "TLS_AES_128_GCM_SHA256"
+    ]
+  },
+  "network": {
+    "cors": {
+      "required": false,
+      "rationale": "Cluster-internal service-to-service call; no browser origin is involved."
+    },
+    "publiclyReachable": false,
+    "ipAllowList": [
+      "cluster pod CIDR only - enforced by a default-deny NetworkPolicy that admits traffic from the listed workload identities"
+    ],
+    "externalRoute": "none (OD-007 confirmed: the three backend services must be unreachable from outside the cluster)"
+  }
+}

@@ -1,0 +1,11 @@
+# Au plus une replique indisponible a la fois lors d'une perturbation volontaire (drain de noeud,
+# eviction). Avec replicas / minReplicas >= 2, l'entree publique reste toujours servie.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: souscription-gateway
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: souscription-gateway

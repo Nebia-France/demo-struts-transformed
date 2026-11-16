@@ -1,0 +1,204 @@
+# Input of generate-stubs.sh (W6-T05). Not a WireMock file: never edit the generated mappings under
+# src/test/resources/wiremock/, edit this file or the contracts and re-run the generator.
+#
+# The contracts under global/contracts/ are the source of truth. For every stub the generator takes
+# from the downstream OpenAPI document: the HTTP method, the base path (servers[0]) and the path
+# template, the declared path and header parameters, the declared status code, its media type and
+# response headers, the request-body members the schema requires (bodyPatterns) and the problem body
+# (FieldErrors defaults). This file only names which operation is stubbed and with which example
+# values; every example is validated against the contract schema and the generation fails on the
+# first mismatch, so a stub can no longer drift silently from its contract.
+#
+# Stub keys:
+#   operation | operations   operationId(s) of the contract (several: one catch-all pattern)
+#   method                    ANY to match every method (multi-operation catch-all only)
+#   label                     free text appended to the generated mapping name
+#   priority                  WireMock priority (1 = highest)
+#   pathParams                exact values, validated against the parameter schema -> urlPath
+#   pathPatterns              regular expressions -> urlPathPattern
+#   matchRequired             true: one matchesJsonPath per member required by the request schema
+#   headers                   equalTo (validated against the header schema) or absent: true
+#   scenario                  WireMock scenario: name, requiredState, newState
+#   response.status           must be declared on the operation(s)
+#   response.delayMs          fixedDelayMilliseconds
+#   response.headers          must be declared on the contract response
+#   response.body             validated against the response schema; omitted for problem+json,
+#                             whose body is derived from FieldErrors (type default, reason, status)
+
+examples:
+  product-prudent: &product-prudent
+    code: PRUDENT
+    name: Horizon Prudent
+    profile: Prudent
+    description: "Une hypothèse de progression modérée pour découvrir le fonctionnement de l'épargne."
+    annualRate: "0.020000"
+  product-equilibre: &product-equilibre
+    code: EQUILIBRE
+    name: Horizon Équilibre
+    profile: Équilibré
+    description: Une hypothèse intermédiaire pour construire un projet dans la durée.
+    annualRate: "0.040000"
+  product-dynamique: &product-dynamique
+    code: DYNAMIQUE
+    name: Horizon Dynamique
+    profile: Dynamique
+    description: Une hypothèse de progression plus élevée, associée à un profil de risque supérieur.
+    annualRate: "0.060000"
+  summary-prudent: &summary-prudent
+    code: PRUDENT
+    name: Horizon Prudent
+    profile: Prudent
+    annualRate: "0.020000"
+  subscriber: &subscriber
+    firstName: Alice
+    lastName: Durand
+    email: alice@example.com
+    birthDate: "1990-01-15"
+  simulation: &simulation
+    initialAmount: "1000.00"
+    monthlyAmount: "100.00"
+    durationYears: 10
+    contributed: "13000.00"
+    finalCapital: "14963.21"
+  confirmation: &confirmation
+    reference: 33333333-3333-3333-3333-333333333333
+    product: *summary-prudent
+    subscriber: *subscriber
+    simulation: *simulation
+    createdAt: "2025-01-01T10:00:00Z"
+
+services:
+  catalogue:
+    contract: souscription-gateway-to-souscription-catalogue-service
+    output: catalogue/mappings/products.json
+    stubs:
+      - operation: listProducts
+        response:
+          status: 200
+          body:
+            - { code: PRUDENT, name: Horizon Prudent, profile: Prudent, annualRate: "0.020000" }
+            - { code: EQUILIBRE, name: Horizon Équilibre, profile: Équilibré, annualRate: "0.040000" }
+            - { code: DYNAMIQUE, name: Horizon Dynamique, profile: Dynamique, annualRate: "0.060000" }
+      - operation: getProduct
+        pathParams: { code: PRUDENT }
+        response: { status: 200, body: *product-prudent }
+      - operation: getProduct
+        pathParams: { code: EQUILIBRE }
+        response: { status: 200, body: *product-equilibre }
+      - operation: getProduct
+        pathParams: { code: DYNAMIQUE }
+        response: { status: 200, body: *product-dynamique }
+      - operation: getProduct
+        label: InternalError fixture, triggered by the reserved code @@forced-error@@
+        priority: 1
+        pathPatterns: { code: ".*forced-error.*" }
+        response: { status: 500 }
+      - operation: getProduct
+        label: NotFound for any unknown code
+        priority: 10
+        pathPatterns: { code: ".+" }
+        response: { status: 404 }
+
+  simulation:
+    contract: souscription-gateway-to-souscription-simulation-service
+    output: simulation/mappings/simulations.json
+    stubs:
+      - operation: computeSimulation
+        matchRequired: true
+        response: { status: 200, body: *simulation }
+      - operation: computeSimulation
+        label: ValidationFailed when the contract-required members are missing
+        priority: 10
+        response: { status: 400 }
+
+  subscription:
+    contract: souscription-gateway-to-souscription-service
+    output: subscription/mappings/drafts.json
+    stubs:
+      - operation: startDraft
+        matchRequired: true
+        response:
+          status: 201
+          headers: { Location: /v1/drafts/11111111-1111-1111-1111-111111111111 }
+          body:
+            draftId: 11111111-1111-1111-1111-111111111111
+            product: *product-prudent
+            confirmationKey: 22222222-2222-2222-2222-222222222222
+            status: STARTED
+      - operation: getDraft
+        pathParams: { draftId: 11111111-1111-1111-1111-111111111111 }
+        response:
+          status: 200
+          body:
+            draftId: 11111111-1111-1111-1111-111111111111
+            product: *product-prudent
+            confirmationKey: 22222222-2222-2222-2222-222222222222
+            status: STARTED
+      - operation: putDraftSubscriber
+        pathParams: { draftId: 11111111-1111-1111-1111-111111111111 }
+        response:
+          status: 200
+          body:
+            draftId: 11111111-1111-1111-1111-111111111111
+            product: *product-prudent
+            subscriber: *subscriber
+            confirmationKey: 22222222-2222-2222-2222-222222222222
+            status: SUBSCRIBER_CAPTURED
+      - operation: putDraftSimulation
+        pathParams: { draftId: 11111111-1111-1111-1111-111111111111 }
+        response:
+          status: 200
+          body:
+            draftId: 11111111-1111-1111-1111-111111111111
+            product: *product-prudent
+            simulation: *simulation
+            confirmationKey: 22222222-2222-2222-2222-222222222222
+            status: SIMULATED
+      - operation: confirmDraft
+        label: an Idempotency-Key the draft no longer carries
+        priority: 1
+        pathPatterns: { draftId: "[^/]+" }
+        headers: { Idempotency-Key: { equalTo: 00000000-0000-0000-0000-000000000000 } }
+        response: { status: 409 }
+      - operation: confirmDraft
+        label: a missing Idempotency-Key, header required by the contract
+        priority: 1
+        pathPatterns: { draftId: "[^/]+" }
+        headers: { Idempotency-Key: { absent: true } }
+        response: { status: 400 }
+      - operation: confirmDraft
+        label: slow draft, the response never arrives within the 5s read timeout
+        priority: 1
+        pathParams: { draftId: 44444444-4444-4444-4444-444444444444 }
+        response: { status: 201, delayMs: 7000, body: *confirmation }
+      - operation: confirmDraft
+        label: first call
+        scenario: { name: confirmation, requiredState: Started, newState: CONFIRMED }
+        pathParams: { draftId: 11111111-1111-1111-1111-111111111111 }
+        headers: { Idempotency-Key: { equalTo: 22222222-2222-2222-2222-222222222222 } }
+        matchRequired: true
+        response:
+          status: 201
+          headers: { Location: /v1/subscriptions/33333333-3333-3333-3333-333333333333 }
+          body: *confirmation
+      - operation: confirmDraft
+        label: replay of the same confirmationKey, same reference
+        scenario: { name: confirmation, requiredState: CONFIRMED }
+        pathParams: { draftId: 11111111-1111-1111-1111-111111111111 }
+        headers: { Idempotency-Key: { equalTo: 22222222-2222-2222-2222-222222222222 } }
+        matchRequired: true
+        response: { status: 200, body: *confirmation }
+      - operation: getSubscription
+        pathParams: { reference: 33333333-3333-3333-3333-333333333333 }
+        response: { status: 200, body: *confirmation }
+      - operations: [getDraft, putDraftSubscriber, putDraftSimulation, confirmDraft]
+        method: ANY
+        label: NotFound for any unknown draft id
+        priority: 10
+        pathPatterns: { draftId: "[^/]+" }
+        response: { status: 404 }
+      - operation: getSubscription
+        label: NotFound for any unknown subscription reference
+        priority: 10
+        pathPatterns: { reference: "[^/]+" }
+        response: { status: 404 }

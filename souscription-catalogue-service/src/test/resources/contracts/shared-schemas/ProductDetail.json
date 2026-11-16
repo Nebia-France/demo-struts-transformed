@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://horizon-souscription.example.com/schemas/ProductDetail.json",
+  "title": "ProductDetail",
+  "type": "object",
+  "description": "Full product definition including its marketing description. Owned by souscription-catalogue-service; the authoritative source of annualRate.",
+  "additionalProperties": false,
+  "required": [
+    "code",
+    "name",
+    "profile",
+    "description",
+    "annualRate"
+  ],
+  "properties": {
+    "code": {
+      "$ref": "ProductSummary.json#/properties/code"
+    },
+    "name": {
+      "$ref": "ProductSummary.json#/properties/name"
+    },
+    "profile": {
+      "$ref": "ProductSummary.json#/properties/profile"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "annualRate": {
+      "$ref": "ProductSummary.json#/properties/annualRate"
+    }
+  }
+}

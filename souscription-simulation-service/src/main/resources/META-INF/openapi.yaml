@@ -1,0 +1,75 @@
+# Static OpenAPI fragment merged by SmallRye with the annotation-scanned model.
+#
+# Only declares what cannot be derived from the Java code: the FieldErrors problem
+# schema referenced by the 400 and 500 responses (its Java type arrives with plan
+# 14-simulation-rfc7807-problem-json), plus the cluster-internal servers and the
+# mTLS security scheme of the frozen contracts
+# (global/contracts/souscription-{gateway,service}-to-souscription-simulation-service/openapi.yaml).
+# Never edit global/contracts/ to resolve a diff - fix this side.
+openapi: 3.1.0
+servers:
+  - url: https://souscription-simulation-service.dev.svc.cluster.local:8443/v1
+    description: Development (cluster-internal, mTLS)
+  - url: https://souscription-simulation-service.staging.svc.cluster.local:8443/v1
+    description: Staging (cluster-internal, mTLS)
+  - url: https://souscription-simulation-service.prod.svc.cluster.local:8443/v1
+    description: Production (cluster-internal, mTLS)
+security:
+  - mutualTls: []
+tags:
+  - name: simulations
+components:
+  securitySchemes:
+    mutualTls:
+      type: mutualTLS
+      description: |
+        TLS 1.3 with client-certificate authentication. Only the souscription-gateway and
+        souscription-service workload identities are accepted; the service has no external route.
+  schemas:
+    FieldErrors:
+      title: FieldErrors
+      type: object
+      description: >-
+        RFC 7807 Problem Details extended with a field-level error array. Media type
+        application/problem+json. Propagated unchanged by souscription-gateway.
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        correlationId:
+          type: string
+          description: Value of the X-Correlation-Id header handled for this request.
+        errors:
+          type: array
+          description: One entry per rejected field, in declaration order. Absent for non-validation problems.
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - field
+              - message
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+                description: Human-readable French message, identical in meaning to the legacy InputValidator message.
+              code:
+                type: string
+                description: Stable machine-readable rule identifier.

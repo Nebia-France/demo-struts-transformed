@@ -1,0 +1,148 @@
+name: horizon-local
+
+x-backend: &backend
+  restart: unless-stopped
+  init: true
+  environment: &backend-env
+    QUARKUS_PROFILE: local
+    QUARKUS_HTTP_HOST: 0.0.0.0
+    QUARKUS_MANAGEMENT_HOST: 0.0.0.0
+    QUARKUS_OTEL_SDK_DISABLED: "true"
+    OTEL_COLLECTOR_ENDPOINT: http://127.0.0.1:4317
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4317
+  volumes:
+    - ./.horizon/pki:/pki:ro
+  healthcheck: &backend-health
+    test: [CMD, curl, -fsS, --max-time, "3", http://127.0.0.1:9000/q/health/ready]
+    interval: 5s
+    timeout: 4s
+    start_period: 30s
+    retries: 30
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: horizon
+      POSTGRES_USER: horizon
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?Lancer scripts/start-all.sh}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U horizon -d horizon"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  souscription-catalogue-service:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: deploy/local/Dockerfile.backend
+      args:
+        SERVICE: souscription-catalogue-service
+    environment:
+      <<: *backend-env
+      TLS_CERT_FILE: /pki/souscription-catalogue-service.crt
+      TLS_KEY_FILE: /pki/souscription-catalogue-service.key
+      TLS_CA_FILE: /pki/ca.crt
+
+  souscription-simulation-service:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: deploy/local/Dockerfile.backend
+      args:
+        SERVICE: souscription-simulation-service
+    environment:
+      <<: *backend-env
+      TLS_CERT_PATH: /pki/souscription-simulation-service.crt
+      TLS_KEY_PATH: /pki/souscription-simulation-service.key
+      TLS_CA_PATH: /pki/ca.crt
+
+  souscription-service:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: deploy/local/Dockerfile.backend
+      args:
+        SERVICE: souscription-service
+    environment:
+      <<: *backend-env
+      QUARKUS_CONFIG_LOCATIONS: /config/local.properties
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/horizon
+      QUARKUS_DATASOURCE_USERNAME: horizon
+      QUARKUS_DATASOURCE_PASSWORD: ${LOCAL_DB_PASSWORD:?Lancer scripts/start-all.sh}
+      QUARKUS_DATASOURCE_DEVSERVICES_ENABLED: "false"
+      QUARKUS_FLYWAY_MIGRATE_AT_START: "true"
+      HORIZON_CATALOGUE_HOST: souscription-catalogue-service
+      HORIZON_SIMULATION_HOST: souscription-simulation-service
+    volumes:
+      - ./.horizon/pki:/pki:ro
+      - ./deploy/local/subscription.properties:/config/local.properties:ro
+    healthcheck:
+      <<: *backend-health
+      test: [CMD, curl, -fsS, --max-time, "3", http://127.0.0.1:8080/q/health/ready]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      souscription-catalogue-service:
+        condition: service_healthy
+      souscription-simulation-service:
+        condition: service_healthy
+
+  souscription-gateway:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: deploy/local/Dockerfile.backend
+      args:
+        SERVICE: souscription-gateway
+    environment:
+      <<: *backend-env
+      QUARKUS_CONFIG_LOCATIONS: /config/local.properties
+      CSRF_SIGNING_KEY: ${LOCAL_CSRF_KEY:?Lancer scripts/start-all.sh}
+      LOCAL_STORE_PASSWORD: ${LOCAL_STORE_PASSWORD:?Lancer scripts/start-all.sh}
+      CATALOGUE_BASE_URI: https://souscription-catalogue-service:8443
+      SIMULATION_BASE_URI: https://souscription-simulation-service:8443
+      SUBSCRIPTION_BASE_URI: http://souscription-service:8080
+    volumes:
+      - ./.horizon/pki:/pki:ro
+      - ./deploy/local/gateway.properties:/config/local.properties:ro
+    depends_on:
+      souscription-service:
+        condition: service_healthy
+
+  souscription-web:
+    build:
+      context: ./souscription-web
+      dockerfile: ../deploy/local/Dockerfile.web
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/healthz]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ingress:
+    image: nginxinc/nginx-unprivileged:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HORIZON_HTTPS_PORT:-8443}:8443"
+    volumes:
+      - ./deploy/local/ingress.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./.horizon/pki:/pki:ro
+    depends_on:
+      souscription-web:
+        condition: service_healthy
+      souscription-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, --no-check-certificate, -O, /dev/null, https://127.0.0.1:8443/healthz]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-data:

@@ -1,0 +1,9 @@
+/node_modules/
+/dist/
+/out-tsc/
+/.angular/
+/e2e/reports/*
+!/e2e/reports/scenario-rate.json
+/.lighthouseci/
+/test-results/
+/playwright-report/

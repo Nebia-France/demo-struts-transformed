@@ -1,0 +1,10 @@
+@if (serverErrors().length > 0) {
+  <div class="message error" role="alert" id="erreurs">
+    <strong>{{ labels.summaryTitle }}</strong>
+    <ul>
+      @for (message of serverErrors(); track message) {
+        <li>{{ message }}</li>
+      }
+    </ul>
+  </div>
+}

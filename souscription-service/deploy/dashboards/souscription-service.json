@@ -1,0 +1,214 @@
+{
+  "title": "souscription-service — observabilite (W5-T03 / W5-T04)",
+  "uid": "souscription-service",
+  "tags": ["horizon", "souscription-service"],
+  "timezone": "Europe/Paris",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "constant",
+        "label": "Service",
+        "query": "souscription-service",
+        "current": { "text": "souscription-service", "value": "souscription-service" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "SLI de disponibilite (objectif 99,9 %)",
+      "description": "Ratio des requetes sans erreur serveur, partitionne par classe de statut. Les 4xx ne consomment pas le budget d'erreur.",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0.99,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0.999 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "disponibilite 30 min",
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$service\",outcome!=\"SERVER_ERROR\"}[30m])) / sum(rate(http_server_requests_seconds_count{application=\"$service\"}[30m]))"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Taux d'erreur HTTP par classe de statut",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{status}}",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{application=\"$service\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Latence HTTP p95 / p99 (budget 300 ms)",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.3 }
+            ]
+          },
+          "custom": { "thresholdsStyle": { "mode": "line" } }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"$service\"}[5m])))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "p99",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"$service\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Consommation du budget de latence (part des requetes > 300 ms)",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "hors budget",
+          "expr": "1 - (sum(rate(http_server_requests_seconds_bucket{application=\"$service\",le=\"0.3\"}[5m])) / sum(rate(http_server_requests_seconds_count{application=\"$service\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Compteurs metier",
+      "description": "Les cinq compteurs de observability/BusinessMetrics. Pre-declares a zero au demarrage : une serie absente signale un probleme de collecte, pas un code non atteint.",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "cps" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "brouillons crees",
+          "expr": "sum(rate(horizon_drafts_created_total{application=\"$service\"}[5m]))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "confirmations",
+          "expr": "sum(rate(horizon_confirmations_succeeded_total{application=\"$service\"}[5m]))"
+        },
+        {
+          "refId": "C",
+          "legendFormat": "rejeux idempotents ({{path}})",
+          "expr": "sum by (path) (rate(horizon_confirmations_duplicate_total{application=\"$service\"}[5m]))"
+        },
+        {
+          "refId": "D",
+          "legendFormat": "rejets de validation",
+          "expr": "sum(rate(horizon_validation_rejected_total{application=\"$service\"}[5m]))"
+        },
+        {
+          "refId": "E",
+          "legendFormat": "brouillons purges",
+          "expr": "sum(rate(horizon_draft_purged_total{application=\"$service\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Pool JDBC — occupation et attente",
+      "description": "Epuisement du pool (R-003) : agroal_awaiting_count > 0 signifie que des requetes attendent une connexion.",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "actives",
+          "expr": "agroal_active_count{application=\"$service\",datasource=\"default\"}"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "disponibles",
+          "expr": "agroal_available_count{application=\"$service\",datasource=\"default\"}"
+        },
+        {
+          "refId": "C",
+          "legendFormat": "en attente",
+          "expr": "agroal_awaiting_count{application=\"$service\",datasource=\"default\"}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Pool JDBC — latence d'acquisition p95 (objectif 300 ms, timeout 3 s)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 12 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "p95 acquisition",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(agroal_acquire_seconds_bucket{application=\"$service\",datasource=\"default\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Accumulation de brouillons (crees - purges)",
+      "description": "Mitigation R-002 et critere de nombre de lignes stable de NFG-011.",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 18 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "solde sur 1 h",
+          "expr": "increase(horizon_drafts_created_total{application=\"$service\"}[1h]) - increase(horizon_draft_purged_total{application=\"$service\"}[1h])"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "JVM — memoire utilisee",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 18 },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{area}} {{id}}",
+          "expr": "sum by (area, id) (jvm_memory_used_bytes{application=\"$service\"})"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+@use '../../styles/tokens' as t;
+
+// `.utility`, `.masthead`, `.brand`, `.brand-mark`, `.space-title` and `.tabs` from
+// `application.css`. In the source the `.sidebar h2` / `.tabs > a` descendant selectors
+// stayed inside one document; here they are local to this template.
+
+.utility {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 14px;
+  background: #f2f3f5;
+  color: #4a5664;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #b0bbc8;
+}
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 100px;
+  padding: 19px 22px;
+  background: t.$c-brand-dark;
+  color: #fff;
+  border-bottom: 4px solid #aebed0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  strong {
+    display: block;
+    font-size: 1.45rem;
+    letter-spacing: 1px;
+  }
+
+  div > span {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: #d3deeb;
+  }
+}
+
+.brand-mark {
+  display: inline-block;
+  font: bold 28px Georgia, serif;
+  padding: 3px 7px;
+  color: #f2e7ca;
+  border: 1px solid #abbdd0;
+  border-top: 3px solid #d5bd85;
+}
+
+.space-title {
+  text-align: right;
+  font-size: 1.12rem;
+  font-weight: bold;
+
+  span {
+    font-size: 0.82rem;
+    font-weight: normal;
+    color: #d3deeb;
+  }
+}
+
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  padding: 8px 12px 0;
+  background: #dce5ef;
+  border-bottom: 1px solid #8a9db2;
+
+  > a,
+  > span {
+    padding: 6px 15px;
+    background: #c8d4e2;
+    border: 1px solid #8a9db2;
+    border-bottom: 0;
+    color: #263d56;
+    font-weight: bold;
+    text-decoration: none;
+  }
+
+  .selected {
+    background: #fff !important;
+    color: t.$c-brand-dark !important;
+    position: relative;
+    top: 1px;
+  }
+}
+
+@media (max-width: 760px) {
+  .masthead {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .brand strong {
+    font-size: 1.1rem;
+  }
+
+  .space-title {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand-mark,
+  .space-title,
+  .utility > span:last-child {
+    display: none;
+  }
+
+  .masthead {
+    min-height: 80px;
+  }
+
+  .tabs > a,
+  .tabs > span {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+}

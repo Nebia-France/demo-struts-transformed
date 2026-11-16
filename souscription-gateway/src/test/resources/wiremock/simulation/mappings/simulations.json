@@ -1,0 +1,71 @@
+{
+  "mappings": [
+    {
+      "name": "computeSimulation - POST /v1/simulations -> 200 (contract: souscription-gateway-to-souscription-simulation-service)",
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/simulations",
+        "bodyPatterns": [
+          {
+            "matchesJsonPath": "$.initialAmount"
+          },
+          {
+            "matchesJsonPath": "$.monthlyAmount"
+          },
+          {
+            "matchesJsonPath": "$.durationYears"
+          },
+          {
+            "matchesJsonPath": "$.annualRate"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "initialAmount": "1000.00",
+          "monthlyAmount": "100.00",
+          "durationYears": 10,
+          "contributed": "13000.00",
+          "finalCapital": "14963.21"
+        }
+      },
+      "metadata": {
+        "generatedBy": "src/test/scripts/generate-stubs.sh",
+        "contract": "souscription-gateway-to-souscription-simulation-service",
+        "operationIds": [
+          "computeSimulation"
+        ]
+      }
+    },
+    {
+      "name": "computeSimulation - POST /v1/simulations -> 400 - ValidationFailed when the contract-required members are missing (contract: souscription-gateway-to-souscription-simulation-service)",
+      "priority": 10,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/simulations"
+      },
+      "response": {
+        "status": 400,
+        "headers": {
+          "Content-Type": "application/problem+json"
+        },
+        "jsonBody": {
+          "type": "about:blank",
+          "title": "Bad Request",
+          "status": 400
+        }
+      },
+      "metadata": {
+        "generatedBy": "src/test/scripts/generate-stubs.sh",
+        "contract": "souscription-gateway-to-souscription-simulation-service",
+        "operationIds": [
+          "computeSimulation"
+        ]
+      }
+    }
+  ]
+}

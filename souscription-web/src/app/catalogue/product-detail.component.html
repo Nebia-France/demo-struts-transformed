@@ -1,0 +1,24 @@
+@if (product(); as item) {
+  <p class="intro">{{ labels.detailIntroBefore }} <strong>{{ item.name }}</strong> {{ labels.detailIntroAfter }}</p>
+  <section class="panel">
+    <h2>{{ item.name }} {{ labels.detailHeadingSuffix }}</h2>
+    <div class="panel-body">
+      <p>{{ item.description }}</p>
+      <table class="data-table details">
+        <tbody>
+          <tr><th scope="row">{{ labels.rowProfile }}</th><td>{{ item.profile }}</td></tr>
+          <tr><th scope="row">{{ labels.rowRate }}</th><td><strong>{{ ratePercent() | number : '1.0-0' : 'fr-FR' }} {{ labels.percentSuffix }}</strong></td></tr>
+          <tr><th scope="row">{{ labels.rowInitial }}</th><td>{{ labels.rowInitialRange }}</td></tr>
+          <tr><th scope="row">{{ labels.rowMonthly }}</th><td>{{ labels.rowMonthlyRange }}</td></tr>
+          <tr><th scope="row">{{ labels.rowDuration }}</th><td>{{ labels.rowDurationRange }}</td></tr>
+          <tr><th scope="row">{{ labels.rowAge }}</th><td>{{ labels.rowAgeValue }}</td></tr>
+        </tbody>
+      </table>
+      <p class="fine-print">{{ labels.detailFinePrint }}</p>
+    </div>
+  </section>
+  <div class="actions">
+    <a routerLink="/catalogue">{{ labels.backToCatalogue }}</a>
+    <button type="button" (click)="start()">{{ labels.startSubscription }}</button>
+  </div>
+}

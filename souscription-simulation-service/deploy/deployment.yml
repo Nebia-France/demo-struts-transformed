@@ -1,0 +1,62 @@
+# souscription-simulation-service — deployment manifest instance (W4-T04, W6-T06).
+#
+# Instantiation only: the manifest body, the security context, the probe block and
+# the volume layout come from the shared template used by the four Quarkus services
+# (NFG-019). This file carries values and their rationale, no manifest structure.
+# Render with:
+#   python3 .ci/templates/render-manifests.py souscription-simulation-service
+# which writes souscription-simulation-service/target/deploy/deployment.yml.
+#
+# Memory sizing: the JVM heap follows the container limit via
+# -XX:MaxRAMPercentage=70 (src/main/docker/Dockerfile.jvm), so memory_limit below IS
+# the heap budget: 70% of 384Mi ≈ 269Mi of heap, the rest for metaspace, code
+# cache, thread stacks and direct buffers. Measured resting RSS is 159 MB and the
+# service holds no datasource, no session and no cache, so the footprint is flat
+# under load (120–200 MB band, NFG-004). Request 192Mi = the measured resting
+# footprint, limit 384Mi = 2x, to absorb GC peaks without allowing growth that
+# would hide a leak.
+#
+# Scaling is CPU-driven, never memory-driven (see README): this service is the CPU
+# load and its memory never signals saturation.
+extends: ../../.ci/templates/deploy/quarkus-service-deployment.yml
+
+with:
+  name: souscription-simulation-service
+  part_of: souscription
+  image: souscription/souscription-simulation-service:1.0.0-SNAPSHOT
+  # >= 2 replicas: the confirmation path multiplies two availability terms
+  # (CONTRACT.md), and the service is stateless with no affinity.
+  replicas: 2
+  traffic_port: 8443
+  management_port: 9000
+  run_as_user: 185
+  memory_request: 192Mi
+  memory_limit: 384Mi
+  cpu_request: 1
+  cpu_limit: 2
+  tls_secret_name: souscription-simulation-service-tls
+  pki_mount_path: /etc/souscription/pki
+  tmp_size_limit: 32Mi
+  # initialDelaySeconds = measured startup time (0.533 s, smoke-test.sh on the
+  # fast-jar artefact), rounded up to the 1 s probe granularity. Not an
+  # arbitrary grace period.
+  startup_initial_delay_s: 1
+  startup_period_s: 1
+  startup_failure_threshold: 10
+  readiness_period_s: 5
+  liveness_period_s: 10
+  probe_timeout_s: 2
+  probe_failure_threshold: 3
+  termination_grace_s: 30
+  extra_env:
+    # Worker pool sized in W4-T02; defaults match the reference 8-core node.
+    - name: SIM_CORE_THREADS
+      value: "8"
+    - name: SIM_MAX_THREADS
+      value: "16"
+    - name: SIM_QUEUE_SIZE
+      value: "64"
+    - name: SIM_MAX_CONNECTIONS
+      value: "200"
+    - name: SIM_MANAGEMENT_PORT
+      value: "9000"

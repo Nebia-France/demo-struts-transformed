@@ -1,0 +1,16 @@
+<a class="skip-link" href="#contenu">{{ labels.skipLink }}</a>
+<div class="site">
+  <app-site-header [step]="step()" />
+  <div class="workspace">
+    <aside class="sidebar">
+      <app-wizard-steps [step]="step()" />
+    </aside>
+    <main id="contenu">
+      <p class="sr-only" role="status" aria-live="polite">{{ routeAnnouncement() }}</p>
+      <app-breadcrumb [pageTitle]="pageTitle()" />
+      <h1>{{ pageTitle() }}</h1>
+      <router-outlet />
+    </main>
+  </div>
+  <app-site-footer />
+</div>

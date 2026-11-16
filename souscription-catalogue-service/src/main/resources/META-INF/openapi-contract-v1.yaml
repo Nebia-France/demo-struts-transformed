@@ -1,0 +1,150 @@
+---
+openapi: 3.1.0
+components:
+  schemas:
+    ProblemDetail:
+      type: object
+      description: Erreur au format RFC 7807
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+    ProductDetail:
+      type: object
+      required:
+      - code
+      - name
+      - profile
+      - description
+      - annualRate
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        profile:
+          type: string
+        description:
+          type: string
+        annualRate:
+          type: number
+          examples:
+          - 0.02
+          description: "Taux annuel, DECIMAL(8,6) : 6 decimales exactes, notation\
+            \ non scientifique"
+          multipleOf: 0.0000010
+        ratePercent:
+          type: number
+          examples:
+          - 2.0
+          description: "Taux en pourcentage, 2 decimales exactes"
+    ProductSummary:
+      type: object
+      required:
+      - code
+      - name
+      - profile
+      - annualRate
+      description: "Produit du catalogue, vue liste"
+      properties:
+        code:
+          type: string
+          examples:
+          - PRUDENT
+        name:
+          type: string
+          examples:
+          - Horizon Prudent
+        profile:
+          type: string
+          examples:
+          - Prudent
+        annualRate:
+          type: number
+          examples:
+          - 0.02
+          description: "Taux annuel, DECIMAL(8,6) : 6 decimales exactes, notation\
+            \ non scientifique"
+          multipleOf: 0.0000010
+paths:
+  /v1/products:
+    get:
+      summary: Liste les produits du catalogue Horizon
+      operationId: list
+      responses:
+        "200":
+          description: Catalogue complet
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductSummary"
+        "405":
+          description: Methode non autorisee
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "500":
+          description: Erreur interne
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+      tags:
+      - Product Resource
+  /v1/products/{code}:
+    get:
+      summary: Fiche d'un produit du catalogue Horizon
+      operationId: byCode
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: .+
+      responses:
+        "200":
+          description: Fiche produit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetail"
+        "404":
+          description: Code produit inconnu
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "500":
+          description: Erreur interne
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+      tags:
+      - Product Resource
+info:
+  title: Horizon Catalogue Service
+  version: 1.0.0
+  description: "Catalogue des placements Horizon (lecture seule). Contrat de resilience\
+    \ /v1 : disponibilite 99.9% (budget d'erreur ~43 min/mois) ; latence serveur p95\
+    \ <= 25 ms, p99 <= 60 ms ; latence observee par l'appelant p95 <= 100 ms (mTLS\
+    \ et serialisation inclus) ; politique appelant : timeout 2 s, 1 retry (delai\
+    \ 100 ms, sur IOException), fallback documente (pire cas ~4,1 s), applicable aux\
+    \ GET seulement - ne jamais etendre a un autre verbe ; fraicheur des donnees :\
+    \ statique, Cache-Control + ETag sur les reponses /v1. Mode de defaillance convenu\
+    \ (CFG-005) : catalogue indisponible => la confirmation echoue proprement en 503\
+    \ et ne persiste rien, aucun taux annuel en cache n'est servi. La tolerance aux\
+    \ pannes (timeout, retry, fallback) est entierement cote appelant : ce service\
+    \ n'en porte aucune."

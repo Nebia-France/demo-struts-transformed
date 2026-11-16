@@ -1,0 +1,6 @@
+// Simulation form rules from `application.css`: `.form-row`, inputs, `.field-error`,
+// `.actions`, plus the panel and table rules of the indicative result.
+@use '../../styles/forms';
+@use '../../styles/panel';
+@use '../../styles/data-table';
+@use '../../styles/message';

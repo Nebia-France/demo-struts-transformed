@@ -1,0 +1,13 @@
+// The `footer` element rule from `application.css`.
+
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 9px 14px;
+  border-top: 1px solid #9aa8b8;
+  background: #e5eaf0;
+  color: #516174;
+  font-size: 0.75rem;
+}

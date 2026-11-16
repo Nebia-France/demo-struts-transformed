@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProductSummaryList",
+  "description": "Reponse de GET /v1/products - tableau de ProductSummary (items inlines : le validateur de classpath ne resout pas les $ref relatifs)",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "required": ["code", "name", "profile", "annualRate"],
+    "additionalProperties": false,
+    "properties": {
+      "code": { "type": "string" },
+      "name": { "type": "string" },
+      "profile": { "type": "string" },
+      "annualRate": { "type": "number", "multipleOf": 0.000001 }
+    }
+  }
+}

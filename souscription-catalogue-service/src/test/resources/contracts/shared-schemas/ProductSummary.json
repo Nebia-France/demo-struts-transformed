@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://horizon-souscription.example.com/schemas/ProductSummary.json",
+  "title": "ProductSummary",
+  "type": "object",
+  "description": "Catalogue list projection of a savings product. Owned by souscription-catalogue-service.",
+  "additionalProperties": false,
+  "required": [
+    "code",
+    "name",
+    "profile",
+    "annualRate"
+  ],
+  "properties": {
+    "code": {
+      "type": "string",
+      "maxLength": 24,
+      "pattern": "^[A-Z][A-Z0-9_]{0,23}$",
+      "examples": [
+        "PRUDENT",
+        "EQUILIBRE",
+        "DYNAMIQUE"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 80,
+      "examples": [
+        "Horizon Prudent"
+      ]
+    },
+    "profile": {
+      "type": "string",
+      "maxLength": 40,
+      "examples": [
+        "Prudent",
+        "Équilibré",
+        "Dynamique"
+      ]
+    },
+    "annualRate": {
+      "type": "string",
+      "pattern": "^[0-9]\\.[0-9]{6}$",
+      "description": "Annual rate as a decimal fraction, DECIMAL(8,6), serialised as a string with exactly six decimals to preserve scale (0.020000 = 2%).",
+      "examples": [
+        "0.020000"
+      ]
+    }
+  }
+}

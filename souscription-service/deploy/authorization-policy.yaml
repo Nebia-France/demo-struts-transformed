@@ -1,0 +1,78 @@
+#
+# Politique d'autorisation de maillage de souscription-service (W6-T03).
+#
+# Source autoritative des identites : global/contracts/souscription-gateway-to-souscription-service
+# /security-policy.json (authentication.mechanism = mTLS, rejectAllOtherIdentities = true).
+#
+# Identite presentee en sortie (client) :
+#   spiffe://horizon-souscription/ns/horizon/sa/souscription-service
+# Identite acceptee en entree (seule) :
+#   spiffe://horizon-souscription/ns/horizon/sa/souscription-gateway
+#
+# Aucune authentification d'utilisateur final n'existe dans ce systeme — ni dans la source, ni
+# ici. L'identite de la charge de travail appelante est le seul signal d'autorisation
+# (authorization.model = none, OD-007) : aucun role, aucun scope, aucune extension d'identite
+# utilisateur (quarkus-oidc, quarkus-security-jpa) n'est introduite.
+#
+# Le materiel X.509 est emis et rotate par la PKI du cluster ; il n'est jamais present dans le
+# depot ni dans l'image (cf. les cles %prod.quarkus.tls.mesh.* de application.properties, qui ne
+# portent que des references d'environnement).
+#
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: souscription-service-mtls
+  labels:
+    app.kubernetes.io/name: souscription-service
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: souscription-service
+  # STRICT et non PERMISSIVE : une connexion en clair ou sans certificat client est refusee au
+  # niveau du transport, avant tout traitement applicatif.
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: souscription-service-callers
+  labels:
+    app.kubernetes.io/name: souscription-service
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: souscription-service
+  # ALLOW avec une unique regle : toute requete qui ne satisfait pas la regle est refusee.
+  # C'est la traduction de rejectAllOtherIdentities = true — il n'existe aucune regle de repli.
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "spiffe://horizon-souscription/ns/horizon/sa/souscription-gateway"
+      to:
+        - operation:
+            # Les six operations du contrat gele, toutes sous le prefixe /v1 porte par l'URL de
+            # serveur du document OpenAPI publie, plus les points techniques scrutes par la
+            # plateforme (sondes et metriques).
+            paths:
+              - "/v1/*"
+              - "/q/health/*"
+              - "/q/metrics"
+            methods:
+              - GET
+              - PUT
+              - POST
+---
+# Compte de service porteur de l'identite SPIFFE sortante. Reference par le Deployment
+# (serviceAccountName: souscription-service) : sans cette reference, le pod emprunterait le
+# compte "default" du namespace et presenterait une identite absente des contrats.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: souscription-service
+  labels:
+    app.kubernetes.io/name: souscription-service
+  annotations:
+    horizon.spiffe/id: "spiffe://horizon-souscription/ns/horizon/sa/souscription-service"

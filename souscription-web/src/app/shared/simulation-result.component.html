@@ -1,0 +1,12 @@
+<table class="data-table financial">
+  <caption>{{ labels.resultCaption }}</caption>
+  <tbody>
+    <tr><th scope="row">{{ labels.resultInitial }}</th><td>{{ initial() | currency : 'EUR' : '€' : '1.2-2' : 'fr-FR' }}</td></tr>
+    <tr><th scope="row">{{ labels.resultMonthly }}</th><td>{{ monthly() | currency : 'EUR' : '€' : '1.2-2' : 'fr-FR' }}</td></tr>
+    <tr><th scope="row">{{ labels.resultDuration }}</th><td>{{ years() }} {{ labels.yearsSuffix }}</td></tr>
+    <tr><th scope="row">{{ labels.resultContributed }}</th><td>{{ contributed() | currency : 'EUR' : '€' : '1.2-2' : 'fr-FR' }}</td></tr>
+    <tr><th scope="row">{{ labels.resultGains }}</th><td>{{ gains() | currency : 'EUR' : '€' : '1.2-2' : 'fr-FR' }}</td></tr>
+    <tr class="total"><th scope="row">{{ labels.resultFinalCapital }}</th><td id="capital-final">{{ finalCapital() | currency : 'EUR' : '€' : '1.2-2' : 'fr-FR' }}</td></tr>
+  </tbody>
+</table>
+<p class="fine-print">{{ labels.resultHypothesisBefore }} {{ ratePercent() | number : '1.0-0' : 'fr-FR' }} {{ labels.percentSuffix }} {{ labels.resultHypothesisAfter }}</p>

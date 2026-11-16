@@ -1,0 +1,11 @@
+// Design tokens ported from `src/main/webapp/assets/css/application.css`.
+// The seven colours below are the exact source values; every component stylesheet
+// must reference them instead of repeating a literal.
+
+$c-brand-dark: #153c64;
+$c-text: #202c38;
+$c-page: #e6e9ed;
+$c-link: #003b7a;
+$c-link-visited: #60406f;
+$c-link-hover: #8d2431;
+$c-focus: #1b5794;

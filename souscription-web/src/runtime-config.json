@@ -1,0 +1,6 @@
+{
+  "telemetry": {
+    "enabled": true,
+    "collectorUrl": "/telemetry/v1/events"
+  }
+}

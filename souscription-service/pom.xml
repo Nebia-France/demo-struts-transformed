@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>fr.demo</groupId>
+  <artifactId>souscription-service</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+    <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+    <quarkus.platform.version>3.33.4.2</quarkus.platform.version>
+    <surefire-plugin.version>3.5.2</surefire-plugin.version>
+    <enforcer-plugin.version>3.5.0</enforcer-plugin.version>
+    <clean-plugin.version>3.4.0</clean-plugin.version>
+    <dependency-check-plugin.version>13.0.0</dependency-check-plugin.version>
+    <postgresql.version>42.7.13</postgresql.version>
+    <guava.version>33.7.2-jre</guava.version>
+    <protobuf.version>4.36.2</protobuf.version>
+    <cucumber.version>7.21.1</cucumber.version>
+    <build-helper-plugin.version>3.6.0</build-helper-plugin.version>
+    <!-- Version d'API Docker negociee par Testcontainers (Dev Services) : le client embarque
+         demande 1.32 par defaut, refusee par les daemons Docker >= 29 (minimum 1.40).
+         Surchargeable par -Ddocker.api.version pour un daemon plus ancien. -->
+    <docker.api.version>1.44</docker.api.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${quarkus.platform.group-id}</groupId>
+        <artifactId>${quarkus.platform.artifact-id}</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- Le quarkus-bom 3.20.1 resolvait org.postgresql:postgresql en 42.7.5, affecte par
+           CVE-2025-49146, CVE-2026-42198 et CVE-2026-54291 (HIGH). La porte CVE (profil cve,
+           failBuildOnCVSS=7.0) exige >= 42.7.12. Depuis le plan 41 (quarkus-bom 3.33.4.2) la
+           valeur est alignee sur celle du BOM (42.7.13), jamais en dessous ; la propriete reste
+           lue par deploy/bench/run-benchmark.sh. -->
+      <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>${postgresql.version}</version>
+      </dependency>
+      <!-- quarkus-bom 3.33.4.2 resout com.google.guava:guava (transitif de grpc, via
+           quarkus-opentelemetry) en 33.5.0-jre, affecte par CVE-2026-102554 (HIGH, releve par le
+           scan d'image trivy du plan 41). Corrige en 33.7.2. A retirer des que le BOM fournit
+           >= 33.7.2. -->
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <!-- quarkus-bom 3.33.4.2 resout com.google.protobuf:protobuf-java (transitif de grpc, via
+           quarkus-opentelemetry) en 4.33.2, signale par OSS Index pour CVE-2026-0994 (corrigee
+           dans la ligne 33.5 de protobuf). Releve en 4.36.2 au lieu d'une suppression : la porte
+           CVE n'accepte aucun fichier de suppression (plan 41, R5a). -->
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>${protobuf.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-rest</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-rest-jackson</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-hibernate-validator</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-hibernate-orm-panache</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-jdbc-postgresql</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-agroal</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-flyway</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-rest-client-jackson</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-smallrye-fault-tolerance</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-smallrye-openapi</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-smallrye-health</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-micrometer-registry-prometheus</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-opentelemetry</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-logging-json</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-scheduler</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-arc</artifactId></dependency>
+    <dependency><groupId>io.quarkus</groupId><artifactId>quarkus-container-image-jib</artifactId></dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- @InjectMock des clients distants (W8-T03, ConfirmationServiceTest). -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5-mockito</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Harnais Gherkin (W0-T09) : le quarkus-bom ne gere pas Cucumber, la version est
+         declaree une seule fois via ${cucumber.version}. -->
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-java</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-junit-platform-engine</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-suite</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>${quarkus.platform.group-id}</groupId>
+        <artifactId>quarkus-maven-plugin</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build</goal>
+              <goal>generate-code</goal>
+              <goal>generate-code-tests</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!-- Pinned: the Maven default (3.2.0) is below the source pom's 3.3.2 (no downgrade, plan 41). -->
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>${clean-plugin.version}</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${surefire-plugin.version}</version>
+        <configuration>
+          <!-- Surefire porte les tests unitaires et les @QuarkusTest : *Test.java uniquement.
+               Le moteur cucumber est exclu pour que cucumber.features
+               (junit-platform.properties) ne declenche pas la collecte des scenarios hors du
+               profil -Pcucumber. -->
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
+          <excludeJUnit5Engines>
+            <engine>cucumber</engine>
+          </excludeJUnit5Engines>
+          <systemPropertyVariables>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+            <api.version>${docker.api.version}</api.version>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <!-- W8-T01 : la phase failsafe fait partie du build par defaut. Elle porte les tests
+           *IT.java (bout en bout, Dev Services). Le moteur cucumber n'y est pas selectionne :
+           les step definitions et les .feature ne sont sur le classpath de test que sous
+           -Pcucumber, qui redefinit cette configuration. -->
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>${surefire-plugin.version}</version>
+        <configuration>
+          <includes>
+            <include>**/*IT.java</include>
+          </includes>
+          <!-- Plan 42 : la porte de contrats a sa propre execution (ci-dessous). -->
+          <excludes>
+            <exclude>**/InterApplicationContractIT.java</exclude>
+          </excludes>
+          <!-- Le moteur cucumber auto-decouvre les scenarios via cucumber.features
+               (junit-platform.properties). Hors -Pcucumber les step definitions ne sont pas
+               compilees : seul le moteur junit-jupiter est selectionne ici. -->
+          <includeJUnit5Engines>
+            <engine>junit-jupiter</engine>
+          </includeJUnit5Engines>
+          <systemPropertyVariables>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+            <api.version>${docker.api.version}</api.version>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+          <!-- Plan 42 : porte bloquante InterApplicationContractIT (@Suite) dans un fork dedie.
+               Partager la JVM des autres *IT fermerait l'application Quarkus du profil par
+               defaut avant les classes de la suite. Resume distinct pour que les deux
+               executions soient verifiees independamment. -->
+          <execution>
+            <id>inter-application-contracts</id>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <includes combine.self="override">
+                <include>**/InterApplicationContractIT.java</include>
+              </includes>
+              <excludes combine.self="override"/>
+              <includeJUnit5Engines combine.self="override">
+                <engine>junit-platform-suite</engine>
+              </includeJUnit5Engines>
+              <!-- Plan 42 R1b : une suite vide (0 test) fait echouer la porte. -->
+              <failIfNoTests>true</failIfNoTests>
+              <summaryFile>${project.build.directory}/failsafe-reports/failsafe-summary-contracts.xml</summaryFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${enforcer-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>enforce-build-constraints</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion><version>[21,22)</version><message>Un JDK 21 est requis pour souscription-service.</message></requireJavaVersion>
+                <!-- NFG-017 : aucune dependance pre-release (SNAPSHOT / RC) dans le graphe.
+                     Le motif bannedDependencies "*:*:*-SNAPSHOT" ne fonctionne pas : maven-enforcer
+                     n'accepte les jokers que comme prefixe de version, un suffixe invalide est
+                     interprete comme "toute version" et bannit l'integralite du graphe.
+                     requireReleaseDeps applique la meme regle de maniere fiable et transitive. -->
+                <requireReleaseDeps>
+                  <searchTransitive>true</searchTransitive>
+                  <message>Aucune dependance SNAPSHOT / pre-release n'est autorisee (NFG-017).</message>
+                </requireReleaseDeps>
+                <bannedDependencies>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>org.apache.struts:*</exclude>
+                    <exclude>struts:*</exclude>
+                    <exclude>com.h2database:h2</exclude>
+                    <exclude>javax.servlet:*</exclude>
+                    <exclude>javax.servlet.jsp.jstl:*</exclude>
+                    <exclude>org.glassfish.web:jakarta.servlet.jsp.jstl</exclude>
+                    <exclude>org.slf4j:slf4j-simple</exclude>
+                    <exclude>io.quarkus:quarkus-undertow</exclude>
+                    <exclude>io.quarkus:quarkus-resteasy</exclude>
+                  </excludes>
+                  <message>La pile legacy (Struts, servlet/JSTL javax, H2, resteasy-classic) est interdite dans souscription-service.</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>local-h2</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-jdbc-h2</artifactId>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>${quarkus.platform.group-id}</groupId>
+            <artifactId>quarkus-maven-plugin</artifactId>
+            <configuration>
+              <systemProperties>
+                <quarkus.profile>dev,local-h2</quarkus.profile>
+              </systemProperties>
+            </configuration>
+          </plugin>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <systemPropertyVariables>
+                <local.h2.enabled>true</local.h2.enabled>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
+          <plugin>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>enforce-build-constraints</id>
+                <configuration>
+                  <rules>
+                    <bannedDependencies>
+                      <includes>
+                        <include>com.h2database:h2</include>
+                      </includes>
+                    </bannedDependencies>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- W0-T09 : harnais Gherkin a la demande. Les step definitions vivent hors du module
+         (features/step_definitions a la racine du depot) et sont ajoutees comme source de test
+         uniquement dans ce profil ; le build par defaut reste inchange. -->
+    <profile>
+      <id>cucumber</id>
+      <build>
+        <testResources>
+          <testResource>
+            <directory>${project.basedir}/src/test/resources</directory>
+          </testResource>
+          <!-- Les .feature sont exposes sur le classpath de test sous "features/"
+               pour @SelectClasspathResource("features"). -->
+          <testResource>
+            <directory>${project.basedir}/../features</directory>
+            <targetPath>features</targetPath>
+            <includes>
+              <include>**/*.feature</include>
+            </includes>
+          </testResource>
+        </testResources>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${build-helper-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>add-gherkin-step-definitions</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.basedir}/../features</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>${surefire-plugin.version}</version>
+            <configuration>
+              <includes combine.self="override">
+                <include>**/CucumberSuiteIT.java</include>
+                <include>**/*IT.java</include>
+              </includes>
+              <!-- Sous ce profil le moteur cucumber est au contraire requis : les .feature et
+                   les step definitions sont sur le classpath de test. -->
+              <includeJUnit5Engines combine.self="override"/>
+              <systemPropertyVariables>
+                <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                <api.version>${docker.api.version}</api.version>
+              </systemPropertyVariables>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- NFG-001 : porte CVE bloquante. Profil dedie pour ne pas ralentir le build par defaut.
+         Base de reference a battre : 9 findings connus (6 HIGH, 3 MEDIUM) sur struts:struts et
+         org.jsoup:jsoup 1.17.2, avec 0 scan automatise. Cible : 0 finding HIGH/CRITICAL. -->
+    <profile>
+      <id>cve</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>${dependency-check-plugin.version}</version>
+            <configuration>
+              <failBuildOnCVSS>7.0</failBuildOnCVSS>
+              <!-- Cle NVD lue dans l'environnement (secrets.NVD_API_KEY), jamais en ligne de commande. -->
+              <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+              <!-- Identifiants OSS Index : entree <server id="ossindex"> du settings.xml (pipeline :
+                   secrets.OSS_INDEX_USERNAME / secrets.OSS_INDEX_TOKEN). OSS Index est une source
+                   complementaire a NVD : une erreur distante (401 sans identifiants, indisponibilite)
+                   est journalisee en avertissement au lieu d'interrompre l'analyse ; sans identifiants,
+                   le plugin 13.x desactive l'analyseur avec un avertissement. Le seuil CVSS 7.0
+                   reste bloquant sur toutes les sources effectivement interrogees. -->
+              <ossIndexServerId>ossindex</ossIndexServerId>
+              <ossIndexWarnOnlyOnRemoteErrors>true</ossIndexWarnOnlyOnRemoteErrors>
+              <formats>
+                <format>HTML</format>
+                <format>JSON</format>
+              </formats>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

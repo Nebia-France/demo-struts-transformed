@@ -1,0 +1,150 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "souscription-web": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss",
+          "standalone": true
+        }
+      },
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/souscription-web",
+            "browser": "src/main.ts",
+            "index": "src/index.html",
+            "deployUrl": "/",
+            "tsConfig": "tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "ssr": false,
+            "prerender": false,
+            "styles": [
+              "src/styles.scss"
+            ],
+            "assets": [
+              {
+                "glob": "version.json",
+                "input": "src",
+                "output": "/"
+              },
+              {
+                "glob": "runtime-config.json",
+                "input": "src",
+                "output": "/"
+              }
+            ]
+          },
+          "configurations": {
+            "production": {
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              },
+              "outputHashing": "all",
+              "sourceMap": false,
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "292kb",
+                  "maximumError": "296kb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kb",
+                  "maximumError": "8kb"
+                }
+              ],
+              "define": {
+                "import.meta.env.NG_APP_USE_GATEWAY_STUB": "\"false\""
+              }
+            },
+            "local": {
+              "define": {
+                "import.meta.env.NG_APP_USE_GATEWAY_STUB": "\"false\""
+              }
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "outputHashing": "none",
+              "sourceMap": true,
+              "baseHref": "/",
+              "define": {
+                "import.meta.env.NG_APP_USE_GATEWAY_STUB": "\"true\""
+              },
+              "assets": [
+                {
+                  "glob": "version.json",
+                  "input": "src",
+                  "output": "/"
+                },
+                {
+                  "glob": "runtime-config.json",
+                  "input": "src",
+                  "output": "/"
+                },
+                {
+                  "glob": "mockServiceWorker.js",
+                  "input": "public",
+                  "output": "/"
+                }
+              ]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          },
+          "configurations": {
+            "local": {
+              "buildTarget": "souscription-web:build:development,local"
+            },
+            "production": {
+              "buildTarget": "souscription-web:build:production"
+            },
+            "development": {
+              "buildTarget": "souscription-web:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "souscription-web:build:development",
+            "tsConfig": "tsconfig.spec.json",
+            "runner": "vitest",
+            "watch": false,
+            "include": [
+              "src/**/*.spec.ts"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

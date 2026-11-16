@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: souscription-catalogue-service
+  labels: { app: souscription-catalogue-service }
+spec:
+  # Default-deny ingress for the catalogue pods: only the rules below are allowed (W6-T02,
+  # NFG-007, CFG-006, IG-003). The Service stays ClusterIP and there is no Ingress object,
+  # so the only reachable paths are the ones whitelisted here.
+  podSelector: { matchLabels: { app: souscription-catalogue-service } }
+  policyTypes: [Ingress]
+  ingress:
+    # Exactly two application callers on the mTLS application port.
+    - from:
+        - podSelector: { matchLabels: { app: souscription-gateway } }
+        - podSelector: { matchLabels: { app: souscription-service } }
+      ports: [{ port: 8443, protocol: TCP }]
+    # The Prometheus scraper reaches the management port through a separate rule; 9000 is
+    # outside the mTLS perimeter (W6-T01) so it must stay restricted to the monitoring namespace.
+    - from:
+        - namespaceSelector: { matchLabels: { name: monitoring } }
+      ports: [{ port: 9000, protocol: TCP }]

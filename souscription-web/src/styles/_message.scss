@@ -1,0 +1,36 @@
+// Feedback rules ported from `application.css` (`.message`, `.notice`, `.error`,
+// `.success`). Imported by every component that renders a message block.
+
+.message {
+  border: 1px solid;
+  padding: 10px 12px;
+  margin: 12px 0 18px;
+  font-size: 0.9rem;
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.notice {
+  background: #fffbed;
+  border-color: #bfb082;
+  color: #5b4b22;
+}
+
+.error {
+  background: #fff2f1;
+  border-color: #bb7773;
+  color: #812b28;
+
+  ul {
+    margin: 5px 0 0;
+    padding-left: 20px;
+  }
+}
+
+.success {
+  background: #eff7eb;
+  border-color: #8da381;
+  color: #36502b;
+}

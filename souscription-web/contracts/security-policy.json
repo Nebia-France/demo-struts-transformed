@@ -1,0 +1,129 @@
+{
+  "communicationId": "souscription-web-to-souscription-gateway",
+  "from": "souscription-web",
+  "to": "souscription-gateway",
+  "authentication": {
+    "mechanism": "none",
+    "details": {
+      "userAuthentication": "none - the source application has no authentication and none is introduced (TQ-062 no-auth-preserve-csrf)",
+      "csrf": {
+        "scheme": "double-submit cookie",
+        "cookieName": "XSRF-TOKEN",
+        "cookieAttributes": "Path=/; Secure; SameSite=Strict; HttpOnly=false (the SPA must read it)",
+        "headerName": "X-CSRF-Token",
+        "tokenIssuanceEndpoint": "GET /api/v1/csrf-token",
+        "tokenEntropyBits": 256,
+        "enforcedOn": [
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE"
+        ],
+        "rejectionStatus": 403,
+        "rationale": "Replaces the session-bound token of csrf.jspf; SameSite=Strict is acceptable because the SPA and the gateway share one origin (OD-004)."
+      },
+      "methodAllowList": [
+        "GET",
+        "HEAD",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "requestEncoding": "UTF-8 enforced on every request, preserving the legacy SecurityFilter behaviour"
+    }
+  },
+  "authorization": {
+    "model": "none",
+    "rationale": "No roles or scopes exist in the source; every operation is anonymous. Authorization must not be invented here.",
+    "operationPermissions": [
+      {
+        "operation": "issueCsrfToken",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": false
+      },
+      {
+        "operation": "listProducts",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": false
+      },
+      {
+        "operation": "getProduct",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": false
+      },
+      {
+        "operation": "simulate",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": true
+      },
+      {
+        "operation": "startDraft",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": true
+      },
+      {
+        "operation": "getDraft",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": false
+      },
+      {
+        "operation": "putDraftSubscriber",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": true
+      },
+      {
+        "operation": "putDraftSimulation",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": true
+      },
+      {
+        "operation": "confirmDraft",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": true
+      },
+      {
+        "operation": "getSubscription",
+        "requiredScopes": [],
+        "requiredRoles": [],
+        "csrfRequired": false
+      }
+    ]
+  },
+  "rateLimiting": {
+    "requestsPerSecond": 50,
+    "burstSize": 100,
+    "scope": "per client IP at the ingress",
+    "onExceeded": "429 with problem+json"
+  },
+  "tls": {
+    "minimumVersion": "1.2",
+    "preferredVersion": "1.3",
+    "required": true,
+    "hsts": "max-age=31536000; includeSubDomains"
+  },
+  "network": {
+    "cors": {
+      "required": false,
+      "rationale": "OD-004: the SPA and the gateway are served from the same origin behind a shared ingress, so no cross-origin configuration is part of this contract."
+    },
+    "responseHeaders": {
+      "Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'; object-src 'none'",
+      "X-Frame-Options": "DENY",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+      "Cache-Control": "no-store"
+    },
+    "ipAllowList": [],
+    "publiclyReachable": true
+  }
+}

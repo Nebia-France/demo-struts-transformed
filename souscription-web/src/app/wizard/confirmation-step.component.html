@@ -1,0 +1,21 @@
+@if (subscription(); as confirmed) {
+  <div class="message success" role="status"><strong>{{ labels.confirmationSuccess }}</strong></div>
+  <section class="panel"><h2>{{ labels.confirmationHeading }}</h2><div class="panel-body">
+    <table class="data-table details"><tbody>
+      <tr><th scope="row">{{ labels.rowReference }}</th><td><strong id="reference">{{ confirmed.reference }}</strong></td></tr>
+      <tr><th scope="row">{{ labels.rowCreatedAt }}</th><td>{{ createdAtLabel() }} {{ labels.timeZoneSuffix }}</td></tr>
+      <tr><th scope="row">{{ labels.rowProduct }}</th><td>{{ confirmed.product.name }}</td></tr>
+      <tr><th scope="row">{{ labels.rowSubscriber }}</th><td>{{ subscriberName() }}</td></tr>
+    </tbody></table>
+    <app-simulation-result
+      [initial]="confirmed.simulation.initialAmount"
+      [monthly]="confirmed.simulation.monthlyAmount"
+      [years]="confirmed.simulation.durationYears.toString()"
+      [contributed]="confirmed.simulation.contributed"
+      [gains]="gains()"
+      [finalCapital]="confirmed.simulation.finalCapital"
+      [ratePercent]="ratePercent()" />
+  </div></section>
+  <p>{{ labels.keepReference }}</p>
+  <div class="actions"><a class="button" routerLink="/catalogue">{{ labels.backToCatalogue }}</a></div>
+}

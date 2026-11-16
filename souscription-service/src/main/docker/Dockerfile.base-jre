@@ -1,0 +1,28 @@
+# Base d'execution JRE 21 sans shell de souscription-service (plan 41, W8-T06).
+#
+# La base distroless gcr.io/distroless/java21-debian12 portait 20 findings HIGH/CRITICAL de
+# paquets Debian (zlib1g, libexpat1, libuuid1, libbrotli1, liblcms2-2), dont la majorite sans
+# correctif amont (statut affected / will_not_fix) ; la variante debian13 en garde 8. La porte
+# d'image (trivy --severity HIGH,CRITICAL --exit-code 1, ignore-unfixed: false) ne peut donc
+# pas passer sur une base Debian. Cette base est assemblee depuis les paquets publics Wolfi,
+# reconstruits en continu, et conserve les garanties du plan 33 : aucun shell, aucun
+# gestionnaire de paquets, aucun busybox dans l'image finale (FROM scratch), UID numerique 185.
+#
+# Construction (avant le build Jib, sur le meme daemon) :
+#   docker build -f souscription-service/src/main/docker/Dockerfile.base-jre \
+#     -t horizon/souscription-jre21-base:21 souscription-service/src/main/docker
+FROM cgr.dev/chainguard/wolfi-base AS build
+RUN echo https://packages.wolfi.dev/os > /etc/apk/repositories \
+ && apk add --no-cache --root /jre-root --initdb --keys-dir /etc/apk/keys \
+      --repositories-file /etc/apk/repositories \
+      wolfi-baselayout ca-certificates-bundle openjdk-21-jre \
+ && test ! -e /jre-root/bin/sh && test ! -e /jre-root/usr/bin/sh \
+ && test ! -e /jre-root/bin/busybox && test ! -e /jre-root/sbin/apk
+
+FROM scratch
+COPY --from=build /jre-root/ /
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk \
+    PATH=/usr/lib/jvm/java-21-openjdk/bin:/usr/bin:/bin \
+    LANG=C.UTF-8
+USER 185
+ENTRYPOINT ["/usr/lib/jvm/java-21-openjdk/bin/java"]

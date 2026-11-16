@@ -1,0 +1,83 @@
+# Règles d'alerte Prometheus de souscription-simulation-service (W5-T02).
+#
+# Toutes les expressions sont dérivées des seules métriques exposées sur /q/metrics
+# (port de management) : http_server_requests_seconds_* (binder http-server),
+# worker_pool_queue_size / worker_pool_queue_delay (binder Vert.x) et
+# simulation_calculate_seconds (timer métier, distinct du timer HTTP).
+#
+# SLO publiés : disponibilité 99,9 % sur 5 min (resilience-contract.json),
+# budget de latence côté serveur NFG-001 p95 < 50 ms, p99 < 120 ms
+# (resilience-contract.json publie les figures côté appelant, 60 ms / 400 ms,
+# marge réseau et retry incluses), taux de 503 < 1 %.
+# Aucune expression ne porte de label de forte cardinalité (montant, taux,
+# corrélation id, trace id) : seuls service, outcome et status sont utilisés.
+groups:
+  - name: souscription-simulation-service-slo
+    rules:
+      - alert: SimulationAvailabilityBelowSlo
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{service="souscription-simulation-service",outcome!="SERVER_ERROR"}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{service="souscription-simulation-service"}[5m]))
+          ) < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          service: souscription-simulation-service
+        annotations:
+          summary: "Disponibilité sous le SLO de 99,9 % sur 5 min"
+          description: "Le ratio de réponses non 5xx est passé sous 0.999 sur la fenêtre de 5 minutes."
+
+      - alert: SimulationLatencyP95High
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket{service="souscription-simulation-service"}[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: souscription-simulation-service
+        annotations:
+          summary: "p95 HTTP > 50 ms"
+          description: "Le p95 de http_server_requests dépasse l'objectif de 50 ms. Comparer avec simulation_calculate_seconds pour attribuer la régression au calcul ou au transport."
+
+      - alert: SimulationLatencyP99High
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (le) (rate(http_server_requests_seconds_bucket{service="souscription-simulation-service"}[5m]))
+          ) > 0.12
+        for: 5m
+        labels:
+          severity: critical
+          service: souscription-simulation-service
+        annotations:
+          summary: "p99 HTTP > 120 ms"
+          description: "Le p99 de http_server_requests dépasse l'objectif de 120 ms."
+
+      - alert: SimulationWorkerPoolQueueSaturated
+        expr: max(worker_pool_queue_size{service="souscription-simulation-service"}) >= 64
+        for: 2m
+        labels:
+          severity: critical
+          service: souscription-simulation-service
+        annotations:
+          summary: "File d'attente du worker pool saturée"
+          description: "worker_pool_queue_size atteint la capacité configurée (SIM_QUEUE_SIZE, défaut 64) : les requêtes suivantes sont rejetées en 503."
+
+      - alert: SimulationServiceUnavailableRateHigh
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{service="souscription-simulation-service",status="503"}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{service="souscription-simulation-service"}[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          service: souscription-simulation-service
+        annotations:
+          summary: "Taux de 503 > 1 %"
+          description: "Plus de 1 % des réponses sont des 503 (bulkhead saturé ou timeout serveur)."

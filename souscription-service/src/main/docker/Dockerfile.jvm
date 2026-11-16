@@ -1,0 +1,35 @@
+#
+# Image durcie de souscription-service (W0-T05, completee par W7-T05).
+#
+# Base JRE 21 sans shell (plan 41, src/main/docker/Dockerfile.base-jre, construite au
+# prealable) : aucun gestionnaire de paquets, aucun shell, aucun binaire utilitaire dans
+# l'image finale. Elle remplace gcr.io/distroless/java21-debian12, dont les paquets Debian
+# portaient des findings HIGH/CRITICAL sans correctif amont. Aucune instruction RUN n'installe quoi que ce soit et
+# aucun ARG ne transporte de secret : les identifiants de base de donnees, le materiel
+# TLS de maillage et l'adresse du collecteur OTLP sont injectes a l'execution depuis le
+# gestionnaire de secrets (cf. deploy/secret-ref.yaml).
+#
+# Le systeme de fichiers racine est monte en lecture seule a l'execution
+# (deploy/pod-security.yaml) ; /tmp est le seul chemin inscriptible et est fourni par un
+# volume emptyDir / tmpfs.
+#
+# L'entrypoint invoque directement le binaire java : aucun script de lancement, donc
+# aucune dependance a un shell.
+#
+# L'image est scannee a chaque construction par l'etape Trivy du pipeline
+# (.github/workflows/souscription-service.yml, --severity HIGH,CRITICAL --exit-code 1).
+#
+FROM horizon/souscription-jre21-base:21
+USER 185
+WORKDIR /deployments
+COPY --chown=185 target/quarkus-app/lib/ /deployments/lib/
+COPY --chown=185 target/quarkus-app/*.jar /deployments/
+COPY --chown=185 target/quarkus-app/app/ /deployments/app/
+COPY --chown=185 target/quarkus-app/quarkus/ /deployments/quarkus/
+EXPOSE 8080
+ENTRYPOINT ["java", \
+  "-XX:MaxRAMPercentage=75", \
+  "-Dfile.encoding=UTF-8", \
+  "-Duser.timezone=Europe/Paris", \
+  "-Djava.io.tmpdir=/tmp", \
+  "-jar", "/deployments/quarkus-run.jar"]

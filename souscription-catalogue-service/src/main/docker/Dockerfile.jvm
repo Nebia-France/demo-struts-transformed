@@ -1,0 +1,32 @@
+# Documented equivalent of the quarkus-container-image-jib build (W3-T03).
+#
+# Build:
+#   mvn -f souscription-catalogue-service/pom.xml package -Dquarkus.container-image.build=false
+#   docker build -f souscription-catalogue-service/src/main/docker/Dockerfile.jvm \
+#     -t financiere-horizon/souscription-catalogue-service:1.0.0 souscription-catalogue-service
+#
+# Run:
+#   docker run --rm -p 8443:8443 financiere-horizon/souscription-catalogue-service:1.0.0
+FROM registry.access.redhat.com/ubi9/openjdk-21-runtime:latest
+
+ENV LANGUAGE='en_US:en'
+
+# quarkus-app/ layout copied in the lib -> main -> quarkus -> app order so that the
+# rarely changing layers are cached first.
+COPY --chown=185:root target/quarkus-app/lib/ /deployments/lib/
+COPY --chown=185:root target/quarkus-app/*.jar /deployments/
+COPY --chown=185:root target/quarkus-app/quarkus/ /deployments/quarkus/
+COPY --chown=185:root target/quarkus-app/app/ /deployments/app/
+
+EXPOSE 8443
+
+# Non-root default user of the UBI9 runtime image (NFG-008)
+USER 185
+
+# Hardening (W3-T07): the image contains no secret, no certificate and no credential —
+# every such value comes from an environment variable or a mounted secret at runtime.
+# Compatible with readOnlyRootFilesystem: true — the only writable path needed is /tmp,
+# supplied by the emptyDir volume declared in deploy/deployment.yaml.
+VOLUME /tmp
+
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70", "-XX:+ExitOnOutOfMemoryError", "-Djava.io.tmpdir=/tmp", "-Dfile.encoding=UTF-8", "-jar", "/deployments/quarkus-run.jar"]

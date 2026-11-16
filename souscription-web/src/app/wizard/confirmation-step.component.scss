@@ -1,0 +1,6 @@
+// Confirmation rules from `application.css`: `.message` / `.success`, `.panel`,
+// `.details` and the `.button` back-to-catalogue link.
+@use '../../styles/message';
+@use '../../styles/panel';
+@use '../../styles/data-table';
+@use '../../styles/forms';

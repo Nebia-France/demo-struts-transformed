@@ -1,0 +1,27 @@
+<p class="intro">{{ labels.subscriberIntroBefore }} <strong>{{ productName() }}</strong>. {{ labels.subscriberIntroAfter }}</p>
+<form [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="status() === 'pending'">
+  <app-error-summary [serverErrors]="summary()" />
+  <section class="panel">
+    <h2>{{ labels.subscriberHeading }}</h2>
+    <div class="panel-body">
+      <p class="required-legend"><span class="required">{{ labels.requiredMark }}</span> {{ labels.requiredLegend }}</p>
+      <div class="form-row">
+        <label for="firstName">{{ labels.firstName }} <span class="required">{{ labels.requiredMark }}</span></label>
+        <div><input type="text" id="firstName" formControlName="firstName" maxlength="80" required aria-describedby="firstName-error" [attr.aria-invalid]="hasError('firstName')"><p class="field-error" id="firstName-error">{{ fieldError('firstName') }}</p></div>
+      </div>
+      <div class="form-row">
+        <label for="lastName">{{ labels.lastName }} <span class="required">{{ labels.requiredMark }}</span></label>
+        <div><input type="text" id="lastName" formControlName="lastName" maxlength="80" required aria-describedby="lastName-error" [attr.aria-invalid]="hasError('lastName')"><p class="field-error" id="lastName-error">{{ fieldError('lastName') }}</p></div>
+      </div>
+      <div class="form-row">
+        <label for="email">{{ labels.email }} <span class="required">{{ labels.requiredMark }}</span></label>
+        <div><input type="text" id="email" formControlName="email" maxlength="254" required aria-describedby="email-hint email-error" [attr.aria-invalid]="hasError('email')"><p class="hint" id="email-hint">{{ labels.emailHint }}</p><p class="field-error" id="email-error">{{ fieldError('email') }}</p></div>
+      </div>
+      <div class="form-row">
+        <label for="birthDate">{{ labels.birthDate }} <span class="required">{{ labels.requiredMark }}</span></label>
+        <div><input type="text" id="birthDate" formControlName="birthDate" maxlength="10" size="12" required aria-describedby="birthDate-hint birthDate-error" [attr.aria-invalid]="hasError('birthDate')"><p class="hint" id="birthDate-hint">{{ labels.birthDateHint }}</p><p class="field-error" id="birthDate-error">{{ fieldError('birthDate') }}</p></div>
+      </div>
+    </div>
+  </section>
+  <div class="actions"><a routerLink="/catalogue">{{ labels.changeProduct }}</a><button type="submit" [disabled]="inFlight()">{{ labels.continue }}</button></div>
+</form>

@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    The only <parent> is the shared platform pin: a properties-only POM holding the
+    single authoritative Quarkus BOM coordinate for the four Quarkus services
+    (NFG-019 / W6-T06). It declares no dependencyManagement, so this module's own
+    import order below (security pins before quarkus-bom) is unaffected.
+
+    The legacy root POM (fr.demo:horizon-souscription) is NOT the parent: it forces
+    war packaging and Java 8.
+
+    Concerns deliberately NOT owned by this module, and their receiving application:
+      - Persistence / datasource (H2, subscriptions schema) -> souscription-service
+      - Subscription confirmation and draft storage         -> souscription-service
+      - Product catalogue lookup                            -> souscription-catalogue-service
+      - View layer (JSP/JSTL/Struts taglib, SPA)            -> souscription-web
+      - Edge concerns (CSRF, CORS, public /api/v1 routing)  -> souscription-gateway
+  -->
+  <parent>
+    <groupId>fr.demo.souscription</groupId>
+    <artifactId>souscription-platform</artifactId>
+    <version>1.0.0</version>
+    <relativePath>../global/platform/pom.xml</relativePath>
+  </parent>
+
+  <groupId>fr.demo.souscription</groupId>
+  <artifactId>souscription-simulation-service</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>Souscription - Simulation Service</name>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <!--
+      quarkus.platform.group-id / artifact-id / version are inherited from the shared
+      platform POM (global/platform/pom.xml) and must never be redefined here: one
+      pin, one place.
+    -->
+    <!--
+      Security pins applied on top of the Quarkus platform BOM so the blocking
+      dependency scan reports 0 CVE of severity HIGH or above (NFG-006).
+      Each is the lowest clean patch of the line already shipped by the platform
+      - upgrades only, never downgrades. Drop a pin once the platform BOM ships
+      the same version or newer.
+    -->
+    <netty.version>4.1.137.Final</netty.version>
+    <jackson.version>2.18.11</jackson.version>
+    <guava.version>33.7.2-jre</guava.version>
+    <micrometer.version>1.15.12</micrometer.version>
+    <!-- 4.5.30+ required: CVE-2026-15075 / CVE-2026-15076 affect 4.x up to 4.5.29. -->
+    <vertx.version>4.5.34</vertx.version>
+    <!-- The Vert.x BOM manages snakeyaml 2.0; keep the platform's 2.3 (no downgrade). -->
+    <snakeyaml.version>2.3</snakeyaml.version>
+    <surefire-plugin.version>3.2.5</surefire-plugin.version>
+    <exec-plugin.version>3.5.0</exec-plugin.version>
+    <cucumber.version>7.18.0</cucumber.version>
+    <!-- Test-scope JSON Schema validator of the plan-32 provider verification (0 known CVE). -->
+    <json-schema-validator.version>1.5.9</json-schema-validator.version>
+    <junit-platform-suite.version>1.10.2</junit-platform-suite.version>
+    <dependency-check-plugin.version>12.1.0</dependency-check-plugin.version>
+    <!-- Blocking CVE gate: 7.0 = HIGH and above (NFG-006). -->
+    <dependency-check.failBuildOnCVSS>7.0</dependency-check.failBuildOnCVSS>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Security pins first: an earlier import wins in Maven BOM resolution. -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-bom</artifactId>
+        <version>${micrometer.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-dependencies</artifactId>
+        <version>${vertx.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>${snakeyaml.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${quarkus.platform.group-id}</groupId>
+        <artifactId>${quarkus.platform.artifact-id}</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-rest-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-arc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-validator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-openapi</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-health</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-opentelemetry</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-logging-json</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- In-memory span exporter: TracePropagationTest reads the spans back (W5-T03). -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-testing</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Explicit: the ported legacy tests use @ParameterizedTest / @CsvSource. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      JSON Schema validator, test scope only (plan 32): the provider verification
+      validates a live raw response body against the frozen
+      global/contracts/shared-schemas/*.json documents instead of restating their
+      keywords as assertions. Not managed by the Quarkus platform BOM, hence the
+      explicit version; test scope, so it ships in no artefact.
+    -->
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>${json-schema-validator.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      Gherkin runner (RAPPORT_COUVERTURE_GHERKIN.md). Explicit versions: these
+      artefacts are not managed by the Quarkus platform BOM. Bound to the
+      -Pcucumber profile, which is the blocking Gherkin gate (plan
+      30-simulation-gherkin-step-definitions).
+    -->
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-java</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>cucumber-junit-platform-engine</artifactId>
+      <version>${cucumber.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-suite</artifactId>
+      <version>${junit-platform-suite.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>${quarkus.platform.group-id}</groupId>
+        <artifactId>quarkus-maven-plugin</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build</goal>
+              <goal>generate-code</goal>
+              <goal>generate-code-tests</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!--
+        Throwaway mTLS material for dev and test (W6-T01). Generated at every
+        build into the reactor build directory (../target/dev-certs), i.e. OUTSIDE
+        this module, so no certificate or key ever exists inside
+        souscription-simulation-service/ and none can be committed. The real
+        certificates come from the cluster PKI as mounted secrets; this execution
+        only exists so @QuarkusTest can present a client certificate to the same
+        TLS 1.3 / client-auth=required transport as production.
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>${exec-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>generate-dev-certs</id>
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${project.basedir}/.ci/generate-dev-certs.sh</executable>
+              <arguments>
+                <argument>${project.basedir}/../target/dev-certs</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${surefire-plugin.version}</version>
+        <configuration>
+          <systemPropertyVariables>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+            <!--
+              mTLS harness (W6-T01): the traffic port offers no plaintext listener and
+              demands a client certificate, so the JVM running the tests presents the
+              build-time souscription-gateway identity by default and trusts the
+              build-time server certificate. These are the JSSE defaults of the test
+              JVM, so every HTTP client used by any suite inherits them; the stores
+              live in the reactor build directory, never in the module.
+            -->
+            <javax.net.ssl.keyStore>${project.basedir}/../target/dev-certs/client-keystore.p12</javax.net.ssl.keyStore>
+            <javax.net.ssl.keyStoreType>PKCS12</javax.net.ssl.keyStoreType>
+            <javax.net.ssl.keyStorePassword>devstore</javax.net.ssl.keyStorePassword>
+            <javax.net.ssl.trustStore>${project.basedir}/../target/dev-certs/truststore.p12</javax.net.ssl.trustStore>
+            <javax.net.ssl.trustStoreType>PKCS12</javax.net.ssl.trustStoreType>
+            <javax.net.ssl.trustStorePassword>devstore</javax.net.ssl.trustStorePassword>
+          </systemPropertyVariables>
+          <!--
+            The Gherkin suite belongs to its own gate (-Pcucumber): the step
+            definitions drive the domain beans in process, and keeping
+            RunCucumberTest out of the default gate avoids running the 42 steps
+            twice per build.
+          -->
+          <excludes>
+            <exclude>**/RunCucumberTest.java</exclude>
+          </excludes>
+          <!--
+            The default Surefire includes plus the *IT contract matrices. This
+            module has no Failsafe execution: the @QuarkusTest contract tests
+            boot the JVM-mode application in the same `mvn test` gate as the
+            unit tests, so SimulationValidationIT must be picked up by Surefire.
+          -->
+          <includes>
+            <include>**/Test*.java</include>
+            <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
+            <include>**/*TestCase.java</include>
+            <include>**/*IT.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!--
+      Gherkin gate (W0-T07). Separate from the default gate: it re-includes
+      RunCucumberTest, which drives features/simulation/simulation.feature.
+      Command: mvn -f souscription-simulation-service/pom.xml clean verify -Pcucumber
+      Blocking since plan 30-simulation-gherkin-step-definitions.
+    -->
+    <profile>
+      <id>cucumber</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludes combine.self="override"/>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+      The single reusable contract-test suite (W6-T06), selected by the JUnit tag
+      `contract` rather than by a class list: a test joins the suite by carrying
+      @Tag("contract"), so no pipeline or script has to be edited when one is added.
+      Run through .ci/templates/contract-suite.sh, which the provider pipeline and
+      both consumer pipelines (souscription-gateway, souscription-service) invoke -
+      see CONTRACT.md.
+      Command: mvn -f souscription-simulation-service/pom.xml test -Pcontract-suite
+    -->
+    <profile>
+      <id>contract-suite</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <groups>contract</groups>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+      dependency-cve-scan stage on the resolved dependency tree of this module.
+      Any CVE of CVSS >= ${dependency-check.failBuildOnCVSS} (HIGH and above)
+      fails the build; the HTML and JSON reports are archived as release
+      artefacts by the pipeline.
+    -->
+    <profile>
+      <id>security-scan</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>${dependency-check-plugin.version}</version>
+            <configuration>
+              <failBuildOnCVSS>${dependency-check.failBuildOnCVSS}</failBuildOnCVSS>
+              <formats>
+                <format>HTML</format>
+                <format>JSON</format>
+              </formats>
+              <skipTestScope>false</skipTestScope>
+            </configuration>
+            <executions>
+              <execution>
+                <phase>verify</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

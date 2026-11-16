@@ -1,0 +1,95 @@
+# souscription-simulation-service pipeline.
+#
+# Instantiation only: every stage, its order and its blocking semantics come from
+# the shared template used by the four Quarkus services (NFG-027). Do not add
+# service-specific stages here - extend the template instead.
+#
+# Stages, in template order:
+#   1. build                 mvn -f souscription-simulation-service/pom.xml clean verify
+#   2. contract-suite        blocking: the single reusable contract suite
+#                            (.ci/templates/contract-suite.sh). It runs the
+#                            provider-side contract tests tagged `contract`
+#                            (mvn -Pcontract-suite) and then diffs
+#                            target/openapi.yaml against the two frozen contracts
+#                            this service provides (gateway and souscription-service
+#                            consumers) on path, operationId, parameters and
+#                            request/response property names, types and required
+#                            lists. Publishes
+#                            souscription-simulation-service-openapi-1.0.0.yaml,
+#                            which is declared as an input artefact of the
+#                            souscription-gateway and souscription-service
+#                            pipelines - those two run THIS suite rather than their
+#                            own (see CONTRACT.md, section "Consumers").
+#                            It also publishes the provider verification report
+#                            (target/contract-verification-report.md/.json): one
+#                            verdict per axis - roles (two contracts provided, none
+#                            consumed, so no stub is required), OpenAPI diff, live
+#                            schema conformance against global/contracts/shared-schemas,
+#                            resilience and security against the two frozen
+#                            resilience-contract.json / security-policy.json files.
+#                            A FAIL on any axis fails the stage, and the report is the
+#                            evidence both consumer pipelines reference next to the
+#                            published document.
+#                            The document itself is served on the management port
+#                            (/q/openapi on 9000, W5-T06), never on the traffic port.
+#   2b. render-manifests     blocking: renders deploy/deployment.yml and
+#                            deploy/networkpolicy.yml - parameter instances, not
+#                            manifests - from the shared deploy templates into
+#                            target/deploy/. An unresolved or unknown parameter fails
+#                            the pipeline (NFG-019).
+#   3. cucumber              BLOCKING: Gherkin suite mvn -Pcucumber. The suite runs
+#                            green (42 steps, no undefined step), so the gate
+#                            promoted by plan 30-simulation-gherkin-step-definitions
+#                            stays blocking - the template tolerates no failure on this stage.
+#   4. dependency-cve-scan   blocking, fails on CVSS >= 7.0 (HIGH and above);
+#                            dep_fail_on_cvss below is passed by the template as
+#                            -Ddependency-check.failBuildOnCVSS=7.0
+#   5. alert-rules-test     blocking: promtool check rules + promtool test rules
+#                            on deploy/alerts/simulation-alerts.yml and its test
+#                            file, so every SLO alert keeps referencing a metric
+#                            actually exposed on /q/metrics
+#   6. mtls-conformance     blocking: asserts the transport and isolation controls of
+#                            plan 24 against a deployed replica, on the RENDERED
+#                            manifest of stage 2b - a call from an
+#                            unauthorised pod must fail to connect, a call without a
+#                            client certificate must fail in the TLS handshake, and a
+#                            call from souscription-gateway with its workload
+#                            certificate must succeed; testssl.sh confirms TLS 1.3 only
+#   7. image-build           src/main/docker/Dockerfile.jvm (fast-jar, jvm-only)
+#   8. image-scan            Trivy, blocking on HIGH/CRITICAL
+#   9. publish               image push + archive of the scan reports
+#   10. smoke-test           asserts "started in" < 2 s and records resting RSS
+#   11. latency-budget       blocking: drives POST /v1/simulations under load on the
+#                            production transport (TLS 1.3, client-auth required) and
+#                            asserts the budget published in CONTRACT.md - p50 <= 15 ms,
+#                            p95 <= 50 ms (NFG-001), p99 <= 120 ms and < 1 KB per
+#                            direction. The published OpenAPI artefact of stage 2 is
+#                            declared as an input of the souscription-gateway and
+#                            souscription-service pipelines (see CONTRACT.md).
+
+extends: ../../.ci/templates/quarkus-service-pipeline.yml
+
+with:
+  module_path: souscription-simulation-service
+  image_name: souscription/souscription-simulation-service
+  dockerfile: src/main/docker/Dockerfile.jvm
+  openapi_contracts: >-
+    global/contracts/souscription-gateway-to-souscription-simulation-service/openapi.yaml
+    global/contracts/souscription-service-to-souscription-simulation-service/openapi.yaml
+  openapi_artifact_name: souscription-simulation-service-openapi-1.0.0.yaml
+  dep_fail_on_cvss: "7.0"
+  alert_rules: deploy/alerts/simulation-alerts.yml
+  alert_rules_tests: deploy/alerts/simulation-alerts-test.yml
+  network_policy: deploy/networkpolicy.yml
+  deploy_manifests: >-
+    souscription-simulation-service/deploy/deployment.yml
+    souscription-simulation-service/deploy/networkpolicy.yml
+  service_host: souscription-simulation-service.horizon.svc.cluster.local
+  image_scan_severity: "HIGH,CRITICAL"
+  startup_budget_s: "2.0"
+  pipeline_budget_min: "5"
+  latency_endpoint: /v1/simulations
+  latency_p50_ms: "15"
+  latency_p95_ms: "50"
+  latency_p99_ms: "120"
+  latency_max_payload_bytes: "1024"

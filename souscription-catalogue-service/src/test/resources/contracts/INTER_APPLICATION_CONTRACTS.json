@@ -1,0 +1,344 @@
+{
+  "manifestVersion": "1.0",
+  "generatedAt": "2026-11-08T12:35:54Z",
+  "topologyRef": "TARGET_APPLICATION_TOPOLOGY.json",
+  "integrationGapsRef": "global/INTEGRATION_GAPS.json",
+  "planSummaryRef": "global/TRANSFORMATION_PLAN_SUMMARY.json",
+  "totalCommunications": 6,
+  "totalContracts": 6,
+  "versioningStrategy": {
+    "public": "URL major version /api/v1 on souscription-gateway (OD-008 confirmed)",
+    "internal": "URL major version /v1 on each backend service (OD-008 confirmed)",
+    "compatibility": "backward-compatible within a major version: new optional fields only; every service publishes its own OpenAPI document and a CI check fails on a backward-incompatible change",
+    "publication": "Each service publishes its /v1 document via quarkus-smallrye-openapi at /q/openapi; the gateway's /api/v1 document is the public contract from which souscription-web generates its TypeScript models."
+  },
+  "contracts": [
+    {
+      "communicationId": "souscription-web-to-souscription-gateway",
+      "from": "souscription-web",
+      "to": "souscription-gateway",
+      "required": true,
+      "mode": "synchronous",
+      "protocol": "HTTPS",
+      "contractType": "OpenAPI",
+      "openApiVersion": "3.1.0",
+      "contractPath": "global/contracts/souscription-web-to-souscription-gateway/openapi.yaml",
+      "securityPolicyPath": "global/contracts/souscription-web-to-souscription-gateway/security-policy.json",
+      "resilienceContractPath": "global/contracts/souscription-web-to-souscription-gateway/resilience-contract.json",
+      "versioning": "URL major version (/api/v1)",
+      "compatibility": "backward-compatible",
+      "authentication": "none (no authentication exists in the source and none is introduced; CSRF token required on state-changing requests)",
+      "authorization": "none",
+      "exchangedData": [
+        "ProductSummary",
+        "ProductDetail",
+        "SubscriberInput",
+        "SimulationInput",
+        "SimulationResult",
+        "DraftView",
+        "ConfirmationRequest",
+        "SubscriptionConfirmation",
+        "FieldErrors"
+      ],
+      "availability": "99.9%",
+      "relatedIntegrationGapIds": [
+        "IG-031",
+        "IG-005",
+        "IG-009",
+        "IG-001",
+        "IG-002",
+        "IG-008",
+        "IG-012"
+      ],
+      "status": "generated",
+      "assumptions": [
+        "Resource paths, operation ids and the CSRF token endpoint (GET /api/v1/csrf-token) are designed here: the source exposed eight *.do actions which the topology explicitly does not preserve as a contract.",
+        "Monetary amounts and the annual rate are JSON strings, not numbers, so DECIMAL(14,2) and DECIMAL(8,6) scales survive JavaScript number handling.",
+        "Dates are ISO-8601 on the wire; the fr_FR dd/MM/yyyy and currency formatting previously done by JSTL fmt is a SPA responsibility (IG-006).",
+        "No CORS section is specified because OD-004 fixes a single shared origin for the SPA and the gateway.",
+        "Rate limiting (50 rps per client IP) and the latency percentiles are defaults: no SLO beyond the confirmed 99.9% availability was supplied.",
+        "The catalogue collection is returned unpaginated because it is three static products; adding pagination later is a breaking change requiring /api/v2."
+      ],
+      "openQuestions": [
+        "Should GET /api/v1/drafts/{draftId} require the CSRF token as well? It is specified as not required (safe method), which assumes no draft id is sensitive enough to need origin binding.",
+        "The server-side draft has no retention policy in this contract. The legacy session expired after 20 minutes; OD-005 chose a persisted table but did not state a purge rule."
+      ]
+    },
+    {
+      "communicationId": "souscription-gateway-to-souscription-catalogue-service",
+      "from": "souscription-gateway",
+      "to": "souscription-catalogue-service",
+      "required": true,
+      "mode": "synchronous",
+      "protocol": "HTTPS",
+      "contractType": "OpenAPI",
+      "openApiVersion": "3.1.0",
+      "contractPath": "global/contracts/souscription-gateway-to-souscription-catalogue-service/openapi.yaml",
+      "securityPolicyPath": "global/contracts/souscription-gateway-to-souscription-catalogue-service/security-policy.json",
+      "resilienceContractPath": "global/contracts/souscription-gateway-to-souscription-catalogue-service/resilience-contract.json",
+      "versioning": "URL major version (/v1)",
+      "compatibility": "backward-compatible",
+      "authentication": "mTLS (service-to-service inside the cluster)",
+      "authorization": "none",
+      "exchangedData": [
+        "ProductSummary",
+        "ProductDetail"
+      ],
+      "availability": "99.9%",
+      "relatedIntegrationGapIds": [
+        "IG-032",
+        "IG-013",
+        "IG-015",
+        "IG-017",
+        "IG-007"
+      ],
+      "status": "generated",
+      "assumptions": [
+        "The accepted mTLS identities are expressed as SPIFFE IDs; the concrete identity format depends on the service mesh, which the inputs do not name.",
+        "souscription-service calls the same published document, so its identity is also listed as accepted on this contract."
+      ],
+      "openQuestions": [
+        "Confirm the service-mesh identity format (SPIFFE assumed) and who issues the workload certificates."
+      ]
+    },
+    {
+      "communicationId": "souscription-gateway-to-souscription-simulation-service",
+      "from": "souscription-gateway",
+      "to": "souscription-simulation-service",
+      "required": true,
+      "mode": "synchronous",
+      "protocol": "HTTPS",
+      "contractType": "OpenAPI",
+      "openApiVersion": "3.1.0",
+      "contractPath": "global/contracts/souscription-gateway-to-souscription-simulation-service/openapi.yaml",
+      "securityPolicyPath": "global/contracts/souscription-gateway-to-souscription-simulation-service/security-policy.json",
+      "resilienceContractPath": "global/contracts/souscription-gateway-to-souscription-simulation-service/resilience-contract.json",
+      "versioning": "URL major version (/v1)",
+      "compatibility": "backward-compatible",
+      "authentication": "mTLS (service-to-service inside the cluster)",
+      "authorization": "none",
+      "exchangedData": [
+        "SimulationInput",
+        "SimulationResult",
+        "FieldErrors"
+      ],
+      "availability": "99.9%",
+      "relatedIntegrationGapIds": [
+        "IG-033",
+        "IG-018",
+        "IG-019",
+        "IG-021",
+        "IG-022",
+        "IG-007"
+      ],
+      "status": "generated",
+      "assumptions": [
+        "POST is used for a side-effect-free computation because the inputs form a request body; it is explicitly documented as safe so the caller's retry is sound.",
+        "The gateway resolves the product annual rate from the catalogue before calling this service; the simulation service never reads the catalogue."
+      ],
+      "openQuestions": [
+        "Confirm that the French validation messages are returned by the backend rather than keyed and localised in the SPA; this contract returns the message text, mirroring ApplicationResources."
+      ]
+    },
+    {
+      "communicationId": "souscription-gateway-to-souscription-service",
+      "from": "souscription-gateway",
+      "to": "souscription-service",
+      "required": true,
+      "mode": "synchronous",
+      "protocol": "HTTPS",
+      "contractType": "OpenAPI",
+      "openApiVersion": "3.1.0",
+      "contractPath": "global/contracts/souscription-gateway-to-souscription-service/openapi.yaml",
+      "securityPolicyPath": "global/contracts/souscription-gateway-to-souscription-service/security-policy.json",
+      "resilienceContractPath": "global/contracts/souscription-gateway-to-souscription-service/resilience-contract.json",
+      "versioning": "URL major version (/v1)",
+      "compatibility": "backward-compatible",
+      "authentication": "mTLS (service-to-service inside the cluster)",
+      "authorization": "none",
+      "exchangedData": [
+        "SubscriberInput",
+        "DraftView",
+        "ConfirmationRequest",
+        "SubscriptionConfirmation",
+        "FieldErrors"
+      ],
+      "availability": "99.9%",
+      "relatedIntegrationGapIds": [
+        "IG-034",
+        "IG-023",
+        "IG-028",
+        "IG-030",
+        "IG-026",
+        "IG-007"
+      ],
+      "status": "generated",
+      "assumptions": [
+        "The draft is modelled as a resource (/v1/drafts/{draftId}) with the confirmation as a sub-resource; the wizard step boundaries come from the source SubscriptionAction, the REST shape is designed here.",
+        "The confirmationKey travels in the request body rather than as an Idempotency-Key header, keeping it the same value the draft already carries (legacy Draft.confirmationKey).",
+        "201 on first confirmation and 200 on replay is a contract decision that makes the preserved unique-constraint idempotency observable to callers."
+      ],
+      "openQuestions": [
+        "Confirm the draft retention/purge policy (OD-005 left it open) and whether a confirmed draft is deleted or kept."
+      ]
+    },
+    {
+      "communicationId": "souscription-service-to-souscription-catalogue-service",
+      "from": "souscription-service",
+      "to": "souscription-catalogue-service",
+      "required": true,
+      "mode": "synchronous",
+      "protocol": "HTTPS",
+      "contractType": "OpenAPI",
+      "openApiVersion": "3.1.0",
+      "contractPath": "global/contracts/souscription-service-to-souscription-catalogue-service/openapi.yaml",
+      "securityPolicyPath": "global/contracts/souscription-service-to-souscription-catalogue-service/security-policy.json",
+      "resilienceContractPath": "global/contracts/souscription-service-to-souscription-catalogue-service/resilience-contract.json",
+      "versioning": "URL major version (/v1)",
+      "compatibility": "backward-compatible",
+      "authentication": "mTLS (service-to-service inside the cluster)",
+      "authorization": "none",
+      "exchangedData": [
+        "ProductDetail (code, label, annual rate) used to validate the draft and recompute the simulation"
+      ],
+      "availability": "99.9%",
+      "relatedIntegrationGapIds": [
+        "IG-035",
+        "IG-024"
+      ],
+      "status": "generated",
+      "assumptions": [
+        "The lookup is specified to happen outside any open database transaction; this is a contract-level requirement, verifiable by test, not an implementation detail.",
+        "A 404 from the catalogue is mapped by souscription-service to a 404/409 on its own contract rather than to a 5xx, so the gateway does not retry an unknown product code."
+      ],
+      "openQuestions": [
+        "Confirm that failing a confirmation when the catalogue is down is acceptable to the business; the alternative (caching the rate) was rejected as unsafe."
+      ]
+    },
+    {
+      "communicationId": "souscription-service-to-souscription-simulation-service",
+      "from": "souscription-service",
+      "to": "souscription-simulation-service",
+      "required": true,
+      "mode": "synchronous",
+      "protocol": "HTTPS",
+      "contractType": "OpenAPI",
+      "openApiVersion": "3.1.0",
+      "contractPath": "global/contracts/souscription-service-to-souscription-simulation-service/openapi.yaml",
+      "securityPolicyPath": "global/contracts/souscription-service-to-souscription-simulation-service/security-policy.json",
+      "resilienceContractPath": "global/contracts/souscription-service-to-souscription-simulation-service/resilience-contract.json",
+      "versioning": "URL major version (/v1)",
+      "compatibility": "backward-compatible",
+      "authentication": "mTLS (service-to-service inside the cluster)",
+      "authorization": "none",
+      "exchangedData": [
+        "SimulationInput",
+        "SimulationResult (authoritative recomputation before persisting the subscription)"
+      ],
+      "availability": "99.9%",
+      "relatedIntegrationGapIds": [
+        "IG-036",
+        "IG-024",
+        "IG-021"
+      ],
+      "status": "generated",
+      "assumptions": [
+        "The annualRate sent here is the one just read from the catalogue, which is also the value persisted in the subscription row, so the request and the stored record agree by construction.",
+        "The returned figures are persisted verbatim; no local recomputation and no fallback to a client-supplied result is permitted by this contract."
+      ],
+      "openQuestions": [
+        "Confirm that a confirmation must fail when the simulation service is down rather than falling back to an in-process computation (OD-003 implies yes)."
+      ]
+    }
+  ],
+  "sharedSchemas": [
+    {
+      "schemaName": "ProductSummary",
+      "path": "global/contracts/shared-schemas/ProductSummary.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-catalogue-service"
+      ]
+    },
+    {
+      "schemaName": "ProductDetail",
+      "path": "global/contracts/shared-schemas/ProductDetail.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-catalogue-service",
+        "souscription-gateway-to-souscription-service",
+        "souscription-service-to-souscription-catalogue-service"
+      ]
+    },
+    {
+      "schemaName": "SubscriberInput",
+      "path": "global/contracts/shared-schemas/SubscriberInput.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-service"
+      ]
+    },
+    {
+      "schemaName": "SimulationInput",
+      "path": "global/contracts/shared-schemas/SimulationInput.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-service"
+      ]
+    },
+    {
+      "schemaName": "SimulationComputeRequest",
+      "path": "global/contracts/shared-schemas/SimulationComputeRequest.json",
+      "usedByCommunications": [
+        "souscription-gateway-to-souscription-simulation-service",
+        "souscription-service-to-souscription-simulation-service"
+      ]
+    },
+    {
+      "schemaName": "SimulationResult",
+      "path": "global/contracts/shared-schemas/SimulationResult.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-simulation-service",
+        "souscription-service-to-souscription-simulation-service"
+      ]
+    },
+    {
+      "schemaName": "DraftView",
+      "path": "global/contracts/shared-schemas/DraftView.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-service"
+      ]
+    },
+    {
+      "schemaName": "ConfirmationRequest",
+      "path": "global/contracts/shared-schemas/ConfirmationRequest.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-service"
+      ]
+    },
+    {
+      "schemaName": "SubscriptionConfirmation",
+      "path": "global/contracts/shared-schemas/SubscriptionConfirmation.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-service"
+      ]
+    },
+    {
+      "schemaName": "FieldErrors",
+      "path": "global/contracts/shared-schemas/FieldErrors.json",
+      "usedByCommunications": [
+        "souscription-web-to-souscription-gateway",
+        "souscription-gateway-to-souscription-catalogue-service",
+        "souscription-gateway-to-souscription-simulation-service",
+        "souscription-gateway-to-souscription-service",
+        "souscription-service-to-souscription-catalogue-service",
+        "souscription-service-to-souscription-simulation-service"
+      ]
+    }
+  ],
+  "dataOwnership": "global/contracts/DATA_OWNERSHIP.json"
+}

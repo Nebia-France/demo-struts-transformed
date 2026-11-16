@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: souscription-catalogue-service
+  labels: { app: souscription-catalogue-service }
+spec:
+  type: ClusterIP
+  selector:
+    app: souscription-catalogue-service
+  ports:
+    - name: https
+      port: 8443
+      targetPort: https
+    - name: management
+      port: 9000
+      targetPort: management

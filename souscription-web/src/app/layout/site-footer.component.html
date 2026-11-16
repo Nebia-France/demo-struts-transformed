@@ -1,0 +1,9 @@
+<footer>
+  <span>{{ labels.footerBrand }}</span>
+  <span>{{ labels.footerService }}</span>
+  @if (version(); as v) {
+    <span class="release" data-testid="release" [attr.data-release]="v.release">{{
+      labels.footerRelease(v.short, v.builtOn)
+    }}</span>
+  }
+</footer>

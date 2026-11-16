@@ -1,0 +1,10 @@
+# Supported browser matrix (NFG-006).
+# Kept aligned with the mid-tier device profile the step budgets are measured on
+# (docs/perf-profile.md, lighthouserc.json): recent evergreen browsers only, so the build emits
+# no legacy polyfill and the recorded numbers stay comparable.
+last 2 Chrome versions
+last 2 Edge versions
+last 2 Firefox versions
+last 2 Safari major versions
+last 2 iOS major versions
+last 2 ChromeAndroid versions

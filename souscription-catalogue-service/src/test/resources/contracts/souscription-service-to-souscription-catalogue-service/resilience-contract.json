@@ -1,0 +1,51 @@
+{
+  "communicationId": "souscription-service-to-souscription-catalogue-service",
+  "from": "souscription-service",
+  "to": "souscription-catalogue-service",
+  "sla": {
+    "availability": "99.9%",
+    "availabilityBasis": "OD-009 confirmed at 99.9%",
+    "responseTime": {
+      "p50": "10ms",
+      "p95": "40ms",
+      "p99": "150ms"
+    },
+    "measurement": "Micrometer timers on the provider, compared against the consumer-side timeout"
+  },
+  "timeout": {
+    "value": "3s",
+    "source": "TARGET_APPLICATION_TOPOLOGY.json communications[].resilience.timeout"
+  },
+  "retry": {
+    "maxRetries": 2,
+    "backoff": "exponential with full jitter, 100ms base, 1s cap",
+    "retryableConditions": [
+      "connection failure",
+      "read timeout",
+      "HTTP 502",
+      "HTTP 503",
+      "HTTP 504"
+    ],
+    "nonRetryableConditions": [
+      "any 4xx response",
+      "HTTP 429"
+    ]
+  },
+  "circuitBreaker": {
+    "enabled": true,
+    "requestVolumeThreshold": 20,
+    "failureRatio": 0.5,
+    "delay": "10s",
+    "successThreshold": 2
+  },
+  "bulkhead": {
+    "maxConcurrentCalls": 20
+  },
+  "fallback": "Fail the confirmation with a retryable 503 and persist nothing. Never fall back to a cached, replicated or default annual rate.",
+  "notes": [
+    "Called before the transaction opens, so no database connection is held during the call.",
+    "Reading an already-confirmed subscription performs no catalogue call: the product columns are denormalised in the subscriptions row.",
+    "Retries are safe (pure read)."
+  ],
+  "verification": "Fault-injection test asserting the timeout, the retry count and the circuit-breaker transitions, plus a load test showing p99 inside the timeout."
+}

@@ -1,0 +1,54 @@
+####
+# Mise a l'echelle horizontale de souscription-gateway (W6-T01).
+# minReplicas: 2 conserve la tolerance a la perte d'une replique (pdb.yaml : maxUnavailable: 1).
+# Deux signaux : CPU, et debit de requetes par pod. Le second est une metrique de pod
+# http_server_requests_per_second : regle de l'adaptateur Prometheus de la plateforme
+# (rate(http_server_requests_seconds_count[1m]) par pod, compteur publie par Micrometer sur
+# :9000/q/metrics) exposee a l'API custom.metrics.k8s.io (PROPRIETAIRE : equipe infrastructure /
+# plateforme). Sans cet adaptateur, l'HPA continue de suivre le seul signal CPU.
+# 200 req/s par pod est une valeur de depart volontairement prudente : les plafonds de
+# docs/capacity.md sont mesures sur poste, sans limite CPU de 1 coeur ni latence aval reelle ; la
+# cible est a recalibrer sur la mesure en environnement.
+####
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: souscription-gateway
+  labels:
+    app: souscription-gateway
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: souscription-gateway
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Pods
+      pods:
+        metric:
+          name: http_server_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "200"
+  behavior:
+    scaleDown:
+      # Retrait progressif : une replique a la fois, apres 5 min de stabilite, chaque retrait
+      # passant par le drain gracieux (preStop + quarkus.shutdown.timeout).
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 30
